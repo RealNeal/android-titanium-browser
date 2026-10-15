@@ -56,20 +56,16 @@ jobs:
         run: |
           export VERSION=$(find chromium/src/out/release -name '*arm64-v8a.apk' | sed 's/.*\///;s/\-arm64-v8a.apk$//')
           echo "VERSION=$VERSION" >> $GITHUB_ENV
-          mv $(find chromium/src/out/release -name '*arm64-v8a.aab') $VERSION-${{ env.unix_time }}-arm64-v8a.aab
           mv $(find chromium/src/out/release -name '*arm64-v8a.apk') $VERSION-${{ env.unix_time }}-arm64-v8a.apk
-          mv $(find chromium/src/out/release -name '*armeabi-v7a.apk') $VERSION-${{ env.unix_time }}-armeabi-v7a.apk
 
       - name: Upload APKs Artifacts
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: titanium-browser-apks
+          name: titanium-browser-arm64-apk
           path: |
             *.apk
-            *.aab
             chromium/src/out/release/*.apk
-            chromium/src/out/release/*.aab
             chromium/src/out/tmp/*.apk
 
       - name: Publish
@@ -80,15 +76,11 @@ jobs:
           name: v${{ env.VERSION }}
           tag_name: v${{ env.VERSION }}
           files: |
-            ${{ env.VERSION }}-${{ env.unix_time }}-arm64-v8a.aab
             ${{ env.VERSION }}-${{ env.unix_time }}-arm64-v8a.apk
-            ${{ env.VERSION }}-${{ env.unix_time }}-armeabi-v7a.apk
 
       - name: Attest
         continue-on-error: true
         uses: actions/attest-build-provenance@v4
         with:
           subject-path: |
-            ${{ env.VERSION }}-${{ env.unix_time }}-arm64-v8a.aab
             ${{ env.VERSION }}-${{ env.unix_time }}-arm64-v8a.apk
-            ${{ env.VERSION }}-${{ env.unix_time }}-armeabi-v7a.apk
