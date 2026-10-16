@@ -35,8 +35,8 @@ icu_use_data_file = true
 rtc_build_examples = false
 use_errorprone_java_compiler = false
 use_rtti = false
-enable_av1_decoder = false
-enable_dav1d_decoder = false
+enable_av1_decoder = true
+enable_dav1d_decoder = true
 include_both_v8_snapshots = false
 include_both_v8_snapshots_android_secondary_abi = false
 
