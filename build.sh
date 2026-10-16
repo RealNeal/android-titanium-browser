@@ -8,7 +8,9 @@ sudo apt-get update
 sudo apt-get install -y sudo lsb-release file nano git curl python3 python3-pillow imagemagick librsvg2-bin
 sudo dpkg --add-architecture i386; sudo apt-get update; sudo apt-get install -y libgcc-s1:i386
 
-git clone --depth 1 https://chromium.googlesource.com/chromium/tools/depot_tools.git
+if [ ! -d depot_tools ]; then
+  git clone --depth 1 https://chromium.googlesource.com/chromium/tools/depot_tools.git
+fi
 export PATH="$PWD/depot_tools:$PATH"
 mkdir -p chromium/src/out/Default; cd chromium/src
 git init
@@ -38,7 +40,7 @@ cp $SCRIPT_DIR/args.gn out/Default/args.gn
 gn gen out/Default # gn args out/Default; echo 'treat_warnings_as_errors = false' >> out/Default/args.gn
 mkdir -p out/tmp out/release
 
-# Если задана переменная BUILD_TIMEOUT (например, 240m), прерываем ninja мягко без ошибки скрипта
+# Если задана переменная BUILD_TIMEOUT (например, 220m), прерываем ninja мягко без ошибки скрипта
 if [ -n "$BUILD_TIMEOUT" ]; then
   timeout -k 5m "$BUILD_TIMEOUT" autoninja -C out/Default chrome_public_apk || {
     EXIT_CODE=$?
@@ -52,9 +54,11 @@ else
   autoninja -C out/Default chrome_public_apk
 fi
 
-mv $(find out/Default/apks -name 'Chrome*.apk') out/tmp/$VERSION-arm64-v8a.apk
-
-export PATH=$PWD/third_party/jdk/current/bin/:$PATH
-export ANDROID_HOME=$PWD/third_party/android_sdk/public
-sign_apk out/tmp/$VERSION-arm64-v8a.apk out/release/$VERSION-arm64-v8a.apk
-rm -rf $SCRIPT_DIR/keys
+APK_FILE=$(find out/Default/apks -name 'Chrome*.apk' 2>/dev/null | head -n 1)
+if [ -n "$APK_FILE" ]; then
+  mv "$APK_FILE" out/tmp/$VERSION-arm64-v8a.apk
+  export PATH=$PWD/third_party/jdk/current/bin/:$PATH
+  export ANDROID_HOME=$PWD/third_party/android_sdk/public
+  sign_apk out/tmp/$VERSION-arm64-v8a.apk out/release/$VERSION-arm64-v8a.apk
+  rm -rf $SCRIPT_DIR/keys
+fi

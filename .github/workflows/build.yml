@@ -69,14 +69,22 @@ jobs:
             fi
           fi
 
+      - name: Cache depot_tools
+        if: steps.check_done.outcome != 'success'
+        uses: actions/cache@v4
+        with:
+          path: depot_tools
+          key: depot-tools-v1
+
       - name: Setup ccache
         if: steps.check_done.outcome != 'success'
         run: |
           sudo apt-get update && sudo apt-get install -y ccache
-          ccache --max-size=6G
+          ccache --max-size=8G
           ccache --set-config=compression=true
-          ccache --set-config=compression_level=6
+          ccache --set-config=compression_level=5
           ccache --set-config=compiler_check=content
+          ccache --set-config=hash_dir=false
           ccache --set-config=sloppiness=file_macro,time_macros,include_file_mtime,include_file_ctime
           echo "/usr/lib/ccache" >> $GITHUB_PATH
           echo "CCACHE_DIR=$HOME/.cache/ccache" >> $GITHUB_ENV
@@ -100,7 +108,6 @@ jobs:
         run: |
           chmod +x *.sh
           echo "unix_time=$(date +%s)" >> $GITHUB_ENV
-          ccache --zero-stats
           find . -name "*args*.gn" -exec sh -c 'grep -q "cc_wrapper" "$1" || echo "cc_wrapper = \"ccache\"" >> "$1"' _ {} \;
 
       - name: Build (Stage ${{ matrix.stage }})
@@ -109,17 +116,10 @@ jobs:
           DEBIAN_FRONTEND: noninteractive
           LOCAL_TEST_JKS: ${{ secrets.LOCAL_TEST_JKS }}
           STORE_TEST_JKS: ${{ secrets.STORE_TEST_JKS }}
+          BUILD_TIMEOUT: 220m
         run: |
-          set +e
-          timeout -k 5m 240m ./build.sh
-          EXIT_CODE=$?
-          set -e
+          ./build.sh
           ccache -s
-          if [ $EXIT_CODE -eq 124 ] || [ $EXIT_CODE -eq 137 ]; then
-            echo "Этап ${{ matrix.stage }} остановлен по таймеру (240 минут). Кэш передается следующему этапу."
-            exit 0
-          fi
-          exit $EXIT_CODE
 
       - name: Save ccache
         if: always() && steps.check_done.outcome != 'success'
