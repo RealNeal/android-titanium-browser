@@ -41,3 +41,5 @@ v8_enable_drumbrake = true
 v8_drumbrake_bounds_checks = true 
 generate_linker_map = false
 cc_wrapper = "env CCACHE_SLOPPINESS=time_macros ccache"
+cc_wrapper = "ccache"
+
