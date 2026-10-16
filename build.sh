@@ -38,6 +38,20 @@ cp $SCRIPT_DIR/args.gn out/Default/args.gn
 gn gen out/Default # gn args out/Default; echo 'treat_warnings_as_errors = false' >> out/Default/args.gn
 mkdir -p out/tmp out/release
 
+# Если задана переменная BUILD_TIMEOUT (например, 240m), прерываем ninja мягко без ошибки скрипта
+if [ -n "$BUILD_TIMEOUT" ]; then
+  timeout -k 5m "$BUILD_TIMEOUT" autoninja -C out/Default chrome_public_apk || {
+    EXIT_CODE=$?
+    if [ $EXIT_CODE -eq 124 ]; then
+      echo "Время этапа вышло. Прогресс сохранен в ccache для следующего этапа."
+      exit 0
+    fi
+    exit $EXIT_CODE
+  }
+else
+  autoninja -C out/Default chrome_public_apk
+fi
+
 autoninja -C out/Default chrome_public_apk
 mv $(find out/Default/apks -name 'Chrome*.apk') out/tmp/$VERSION-arm64-v8a.apk
 
