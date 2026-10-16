@@ -23,6 +23,14 @@ jobs:
       - uses: actions/checkout@v5
         with:
           submodules: true
+
+      - name: Free Disk Space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          df -h
       
       - name: Update 
         continue-on-error: true
@@ -53,10 +61,14 @@ jobs:
           ./build.sh
 
       - name: Set
+        continue-on-error: true
         run: |
-          export VERSION=$(find chromium/src/out/release -name '*arm64-v8a.apk' | sed 's/.*\///;s/\-arm64-v8a.apk$//')
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-          mv $(find chromium/src/out/release -name '*arm64-v8a.apk') $VERSION-${{ env.unix_time }}-arm64-v8a.apk
+          export APK_FILE=$(find chromium/src/out/release -name '*arm64-v8a.apk' | head -n 1)
+          if [ -n "$APK_FILE" ]; then
+            export VERSION=$(basename "$APK_FILE" -arm64-v8a.apk)
+            echo "VERSION=$VERSION" >> $GITHUB_ENV
+            cp "$APK_FILE" "$VERSION-${{ env.unix_time }}-arm64-v8a.apk"
+          fi
 
       - name: Upload APKs Artifacts
         uses: actions/upload-artifact@v4
@@ -67,10 +79,12 @@ jobs:
             *.apk
             chromium/src/out/release/*.apk
             chromium/src/out/tmp/*.apk
+          if-no-files-found: warn
 
       - name: Publish
         continue-on-error: true
         uses: softprops/action-gh-release@v2
+        if: env.VERSION != ''
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           name: v${{ env.VERSION }}
@@ -81,6 +95,7 @@ jobs:
       - name: Attest
         continue-on-error: true
         uses: actions/attest-build-provenance@v4
+        if: env.VERSION != ''
         with:
           subject-path: |
             ${{ env.VERSION }}-${{ env.unix_time }}-arm64-v8a.apk
