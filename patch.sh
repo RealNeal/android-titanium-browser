@@ -8,6 +8,7 @@ sed -i 's|<data android:mimeType="message/rfc822"/>|<data android:mimeType="mess
 sed -i '/com.google.ar.core.min_apk_version/d' third_party/arcore-android-sdk-client/AndroidManifest_basesplit.xml
 # sed -i 's|Google LLC|jqssun, Google LLC|' chrome/browser/ui/android/strings/android_chrome_strings.grd
 
+mkdir -p $SCRIPT_DIR/extensions/dist
 cp -r $SCRIPT_DIR/extensions/dist titanium/
 cp $SCRIPT_DIR/extensions/stage_bundled_extensions.inc titanium/dist/
 sed -i 's|"//components/privacy_sandbox/privacy_sandbox_attestations/preload:privacy_sandbox_attestations_assets",|&"//titanium/dist:extension_assets",|' chrome/android/BUILD.gn
