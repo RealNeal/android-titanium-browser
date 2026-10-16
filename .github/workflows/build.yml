@@ -21,7 +21,7 @@ jobs:
     runs-on: ${{ github.event_name == 'workflow_dispatch' && inputs.runner || 'ubuntu-latest' }}
     timeout-minutes: 340
     strategy:
-      fail-fast: true
+      fail-fast: false
       max-parallel: 1
       matrix:
         stage: [1, 2, 3]
@@ -99,9 +99,8 @@ jobs:
         if: steps.check_done.outcome != 'success'
         run: |
           chmod +x *.sh
-          echo "unix_time=$(date +\%s)" >> $GITHUB_ENV
+          echo "unix_time=$(date +%s)" >> $GITHUB_ENV
           ccache --zero-stats
-          # Автоматически добавляем cc_wrapper = "ccache" во все args.gn в репозитории, если еще не добавлен
           find . -name "*args*.gn" -exec sh -c 'grep -q "cc_wrapper" "$1" || echo "cc_wrapper = \"ccache\"" >> "$1"' _ {} \;
 
       - name: Build (Stage ${{ matrix.stage }})
@@ -112,11 +111,11 @@ jobs:
           STORE_TEST_JKS: ${{ secrets.STORE_TEST_JKS }}
         run: |
           set +e
-          timeout -k 2m 240m ./build.sh
+          timeout -k 5m 240m ./build.sh
           EXIT_CODE=$?
           set -e
           ccache -s
-          if [ $EXIT_CODE -eq 124 ] \vert{}\vert{} [$EXIT_CODE -eq 137 ]; then
+          if [ $EXIT_CODE -eq 124 ] || [ $EXIT_CODE -eq 137 ]; then
             echo "Этап ${{ matrix.stage }} остановлен по таймеру (240 минут). Кэш передается следующему этапу."
             exit 0
           fi
@@ -158,3 +157,14 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           name: v${{ env.VERSION }}
+          tag_name: v${{ env.VERSION }}
+          files: |
+            ${{ env.VERSION }}-${{ env.unix_time }}-arm64-v8a.apk
+
+      - name: Attest
+        continue-on-error: true
+        uses: actions/attest-build-provenance@v4
+        if: steps.check_done.outcome != 'success' && env.VERSION != ''
+        with:
+          subject-path: |
+            ${{ env.VERSION }}-${{ env.unix_time }}-arm64-v8a.apk

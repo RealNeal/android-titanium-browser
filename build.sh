@@ -42,7 +42,7 @@ mkdir -p out/tmp out/release
 if [ -n "$BUILD_TIMEOUT" ]; then
   timeout -k 5m "$BUILD_TIMEOUT" autoninja -C out/Default chrome_public_apk || {
     EXIT_CODE=$?
-    if [ $EXIT_CODE -eq 124 ]; then
+    if [ $EXIT_CODE -eq 124 ] || [ $EXIT_CODE -eq 137 ]; then
       echo "Время этапа вышло. Прогресс сохранен в ccache для следующего этапа."
       exit 0
     fi
@@ -52,7 +52,6 @@ else
   autoninja -C out/Default chrome_public_apk
 fi
 
-autoninja -C out/Default chrome_public_apk
 mv $(find out/Default/apks -name 'Chrome*.apk') out/tmp/$VERSION-arm64-v8a.apk
 
 export PATH=$PWD/third_party/jdk/current/bin/:$PATH
