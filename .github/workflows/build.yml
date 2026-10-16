@@ -158,4 +158,3 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           name: v${{ env.VERSION }}
-          tag_
