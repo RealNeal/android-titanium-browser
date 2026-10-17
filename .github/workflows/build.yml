@@ -116,7 +116,7 @@ jobs:
           DEBIAN_FRONTEND: noninteractive
           LOCAL_TEST_JKS: ${{ secrets.LOCAL_TEST_JKS }}
           STORE_TEST_JKS: ${{ secrets.STORE_TEST_JKS }}
-          BUILD_TIMEOUT: 220m
+          BUILD_TIMEOUT: 260m
         run: |
           ./build.sh
           ccache -s
