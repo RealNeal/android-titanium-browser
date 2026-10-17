@@ -76,6 +76,14 @@ jobs:
           path: depot_tools
           key: depot-tools-v1
 
+      - name: Set ENV
+        if: steps.check_done.outcome != 'success'
+        run: |
+          chmod +x *.sh
+          echo "unix_time=$(date +%s)" >> $GITHUB_ENV
+          VERSION=$(grep -m1 -o '[0-9]\+\(\.[0-9]\+\)\{3\}' vanadium/args.gn)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
       - name: Restore Ninja build cache (out/Default)
         if: steps.check_done.outcome != 'success'
         uses: actions/cache/restore@v4
@@ -86,11 +94,45 @@ jobs:
             ninja-out-default-${{ github.run_id }}-stage-
             ninja-out-default-
 
-      - name: Set ENV
+      - name: Restore build cache from GitHub Release (Fallback)
         if: steps.check_done.outcome != 'success'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          chmod +x *.sh
-          echo "unix_time=$(date +%s)" >> $GITHUB_ENV
+          if [ ! -f chromium/src/out/Default/.ninja_log ]; then
+            echo "Actions Cache пуст или не найден. Проверяем постоянный кэш в GitHub Releases..."
+            PREV_STAGE=$(( ${{ matrix.stage }} - 1 ))
+            mkdir -p /tmp/cache_download
+            cd /tmp/cache_download
+            
+            # 1. Пробуем скачать кэш предыдущего этапа
+            if [ $PREV_STAGE -ge 1 ]; then
+              echo "Поиск кэша этапа $PREV_STAGE..."
+              gh release download build-cache -p "out-default-*-stage-${PREV_STAGE}.tar.zst" || true
+            fi
+            
+            # 2. Если не найден, пробуем любой доступный кэш этапов
+            if ! ls out-default-*.tar.zst 1>/dev/null 2>&1; then
+              echo "Поиск любого доступного кэша build-cache..."
+              gh release download build-cache -p "out-default-*.tar.zst" || true
+            fi
+            
+            # 3. Если найден архив, распаковываем его в chromium/src
+            LATEST_ARCHIVE=$(ls -t out-default-*.tar.zst 2>/dev/null | head -n 1)
+            if [ -n "$LATEST_ARCHIVE" ]; then
+              echo "Восстановление из постоянного релиза: $LATEST_ARCHIVE"
+              mkdir -p "$GITHUB_WORKSPACE/chromium/src"
+              tar --zstd -xf "$LATEST_ARCHIVE" -C "$GITHUB_WORKSPACE/chromium/src"
+              echo "Кэш успешно распакован из GitHub Release!"
+            else
+              echo "В GitHub Releases постоянный кэш пока не найден."
+            fi
+            cd "$GITHUB_WORKSPACE"
+            rm -rf /tmp/cache_download
+          else
+            echo "Кэш out/Default уже успешно восстановлен из GitHub Actions Cache."
+          fi
 
       - name: Build (Stage ${{ matrix.stage }})
         if: steps.check_done.outcome != 'success'
@@ -115,6 +157,33 @@ jobs:
         with:
           path: chromium/src/out/Default
           key: ninja-out-default-${{ github.run_id }}-stage-${{ matrix.stage }}
+
+      - name: Save build cache to GitHub Release (Permanent)
+        if: always() && steps.check_done.outcome != 'success'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -f chromium/src/out/Default/.ninja_log ]; then
+            APK_READY=$(find chromium/src/out -name '*arm64-v8a.apk' 2>/dev/null | head -n 1)
+            if [ -n "$APK_READY" ]; then
+              echo "Финальный APK уже собран! Пропускаем выгрузку промежуточного кэша."
+              exit 0
+            fi
+
+            ARCHIVE_NAME="out-default-${VERSION}-stage-${{ matrix.stage }}.tar.zst"
+            echo "Создание постоянного архива $ARCHIVE_NAME..."
+            tar -cf - -C chromium/src out/Default | zstd -T0 -5 -o "$ARCHIVE_NAME"
+            echo "Размер архива: $(du -sh "$ARCHIVE_NAME" | cut -f1)"
+
+            echo "Проверка наличия релиза build-cache..."
+            gh release view build-cache >/dev/null 2>&1 || gh release create build-cache --title "Build Cache (Permanent)" --notes "Постоянное хранилище промежуточных сборок Ninja out/Default" --prerelease
+
+            echo "Выгрузка $ARCHIVE_NAME в релиз build-cache..."
+            gh release upload build-cache "$ARCHIVE_NAME" --clobber
+            rm -f "$ARCHIVE_NAME"
+            echo "Кэш этапа ${{ matrix.stage }} успешно сохранён в GitHub Releases!"
+          fi
 
       - name: Set
         if: steps.check_done.outcome != 'success'
