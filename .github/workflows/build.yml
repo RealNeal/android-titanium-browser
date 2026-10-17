@@ -55,14 +55,14 @@ jobs:
         if: steps.check_done.outcome != 'success'
         continue-on-error: true
         run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           cd vanadium
           git fetch --tags
           git checkout $(git tag | sort -V | tail -n1)
           cd ..
           if [ "${{ matrix.stage }}" = "1" ]; then
             git add vanadium
-            git config --global user.name 'github-actions[bot]'
-            git config --global user.email 'github-actions[bot]@users.noreply.github.com'
             if ! git diff --staged --quiet; then
               git commit -am "update"
               git push || true
