@@ -24,7 +24,7 @@ jobs:
       fail-fast: false
       max-parallel: 1
       matrix:
-        stage: [1, 2, 3]
+        stage: [1, 2, 3, 4]
 
     steps:
       - name: Check if APK is already built in previous stage
