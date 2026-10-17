@@ -76,39 +76,21 @@ jobs:
           path: depot_tools
           key: depot-tools-v1
 
-      - name: Setup ccache
-        if: steps.check_done.outcome != 'success'
-        run: |
-          sudo apt-get update && sudo apt-get install -y ccache
-          ccache --max-size=8G
-          ccache --set-config=compression=true
-          ccache --set-config=compression_level=5
-          ccache --set-config=compiler_check=content
-          ccache --set-config=hash_dir=false
-          ccache --set-config=sloppiness=file_macro,time_macros,include_file_mtime,include_file_ctime
-          echo "/usr/lib/ccache" >> $GITHUB_PATH
-          echo "CCACHE_DIR=$HOME/.cache/ccache" >> $GITHUB_ENV
-          echo "CCACHE_BASEDIR=$GITHUB_WORKSPACE" >> $GITHUB_ENV
-          echo "CCACHE_CPP2=yes" >> $GITHUB_ENV
-          echo "CCACHE_COMPILERCHECK=content" >> $GITHUB_ENV
-          echo "CCACHE_SLOPPINESS=file_macro,time_macros,include_file_mtime,include_file_ctime" >> $GITHUB_ENV
-
-      - name: Restore ccache
+      - name: Restore Ninja build cache (out/Default)
         if: steps.check_done.outcome != 'success'
         uses: actions/cache/restore@v4
         with:
-          path: ~/.cache/ccache
-          key: ccache-titanium-${{ github.run_id }}-stage-${{ matrix.stage }}
+          path: chromium/src/out/Default
+          key: ninja-out-default-${{ github.run_id }}-stage-${{ matrix.stage }}
           restore-keys: |
-            ccache-titanium-${{ github.run_id }}-stage-
-            ccache-titanium-
+            ninja-out-default-${{ github.run_id }}-stage-
+            ninja-out-default-
 
       - name: Set ENV
         if: steps.check_done.outcome != 'success'
         run: |
           chmod +x *.sh
           echo "unix_time=$(date +%s)" >> $GITHUB_ENV
-          find . -name "*args*.gn" -exec sh -c 'grep -q "cc_wrapper" "$1" || echo "cc_wrapper = \"ccache\"" >> "$1"' _ {} \;
 
       - name: Build (Stage ${{ matrix.stage }})
         if: steps.check_done.outcome != 'success'
@@ -119,14 +101,20 @@ jobs:
           BUILD_TIMEOUT: 260m
         run: |
           ./build.sh
-          ccache -s
+          if [ -f chromium/src/out/Default/.ninja_log ]; then
+            echo "=== Статистика сборки Ninja ==="
+            echo -n "Выполнено шагов: "
+            wc -l < chromium/src/out/Default/.ninja_log || true
+            echo -n "Размер папки out/Default: "
+            du -sh chromium/src/out/Default || true
+          fi
 
-      - name: Save ccache
+      - name: Save Ninja build cache (out/Default)
         if: always() && steps.check_done.outcome != 'success'
         uses: actions/cache/save@v4
         with:
-          path: ~/.cache/ccache
-          key: ccache-titanium-${{ github.run_id }}-stage-${{ matrix.stage }}
+          path: chromium/src/out/Default
+          key: ninja-out-default-${{ github.run_id }}-stage-${{ matrix.stage }}
 
       - name: Set
         if: steps.check_done.outcome != 'success'

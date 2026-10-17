@@ -41,4 +41,3 @@ include_both_v8_snapshots = false
 include_both_v8_snapshots_android_secondary_abi = false
 
 generate_linker_map = false
-cc_wrapper = "ccache"

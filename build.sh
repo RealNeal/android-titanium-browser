@@ -38,6 +38,13 @@ gclient runhooks
 ./build/install-build-deps.sh --no-prompt
 
 source $SCRIPT_DIR/patch.sh
+
+# Синхронизация меток времени: устанавливаем дату коммита для исходников Chromium,
+# чтобы они гарантированно были старее любых скомпилированных объектов в сохраненном out/Default
+echo "Синхронизация меток времени исходников Chromium..."
+COMMIT_TIME=$(git log -1 --format=%ct)
+find . -name '.git' -prune -o -name 'out' -prune -o -type f -exec touch -d "@$COMMIT_TIME" {} +
+
 cp $SCRIPT_DIR/args.gn out/Default/args.gn
 gn gen out/Default # gn args out/Default; echo 'treat_warnings_as_errors = false' >> out/Default/args.gn
 mkdir -p out/tmp out/release
@@ -47,7 +54,7 @@ if [ -n "$BUILD_TIMEOUT" ]; then
   timeout -k 5m "$BUILD_TIMEOUT" autoninja -C out/Default chrome_public_apk || {
     EXIT_CODE=$?
     if [ $EXIT_CODE -eq 124 ] || [ $EXIT_CODE -eq 137 ]; then
-      echo "Время этапа вышло. Прогресс сохранен в ccache для следующего этапа."
+      echo "Время этапа вышло. Прогресс сборки сохранен в out/Default для следующего этапа."
       exit 0
     fi
     exit $EXIT_CODE
