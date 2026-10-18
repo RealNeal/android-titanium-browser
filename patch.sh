@@ -45,6 +45,8 @@ feature_overrides.EnableFeature(media::kAutoPictureInPictureAndroid);\
 feature_overrides.EnableFeature(media::kContextMenuPictureInPictureAndroid);\
 feature_overrides.EnableFeature(chrome::android::kLoadAllTabsAtStartup);\
 feature_overrides.EnableFeature(chrome::android::kChromeNativeUrlOverriding);\
+feature_overrides.DisableFeature(chrome::android::kAndroidHubSearch);\
+feature_overrides.DisableFeature(chrome::android::kTabGroupParityAndroid);\
 #if 0
 d}' chrome/browser/chrome_browser_field_trials.cc
 sed -i '/^bool ShouldFallbackToSWIfGLES3NotSupported() {$/,/^}$/ s|^  return true;$|  return false;|' ui/gl/gl_features.cc # virt
@@ -184,7 +186,16 @@ sed -i 's|return !isIncognitoShowing();|return false;|' chrome/android/java/src/
 # tab group bottom bar: remove group dialog arrow button
 sed -i 's|mShowGroupDialogButton.setVisibility(visible ? View.VISIBLE : View.GONE);|mShowGroupDialogButton.setVisibility(View.GONE);|' chrome/android/features/tab_ui/java/src/org/chromium/chrome/browser/tasks/tab_management/TabGroupUiToolbarView.java
 sed -i 's|mShowGroupDialogButton = findViewById(R.id.toolbar_show_group_dialog_button);|& mShowGroupDialogButton.setVisibility(View.GONE);|' chrome/android/features/tab_ui/java/src/org/chromium/chrome/browser/tasks/tab_management/TabGroupUiToolbarView.java
-sed -i 's|id/toolbar_show_group_dialog_button"|& android:visibility="gone"|' chrome/android/features/tab_ui/java/res/layout/bottom_tab_strip_toolbar.xml
-sed -i 's|id/toolbar_show_group_dialog_button"|& android:visibility="gone"|' chrome/android/features/tab_ui/java/res/layout/dynamic_bottom_tab_strip_toolbar.xml
+sed -i 's|id/toolbar_show_group_dialog_button"|& android:visibility="gone" android:layout_width="0dp" android:layout_height="0dp"|' chrome/android/features/tab_ui/java/res/layout/bottom_tab_strip_toolbar.xml
+sed -i 's|id/toolbar_show_group_dialog_button"|& android:visibility="gone" android:layout_width="0dp" android:layout_height="0dp"|' chrome/android/features/tab_ui/java/res/layout/dynamic_bottom_tab_strip_toolbar.xml
+
+# tab search: remove "Search tabs" search bar from tab switcher
+sed -i 's|newFlag(ChromeFeatureList.ANDROID_HUB_SEARCH, true);|newFlag(ChromeFeatureList.ANDROID_HUB_SEARCH, false);|' chrome/browser/flags/android/java/src/org/chromium/chrome/browser/flags/ChromeFeatureList.java
+sed -i 's|newFlag(ChromeFeatureList.TAB_SWITCHER_SEARCH, true);|newFlag(ChromeFeatureList.TAB_SWITCHER_SEARCH, false);|' chrome/browser/flags/android/java/src/org/chromium/chrome/browser/flags/ChromeFeatureList.java
+find chrome/android/features/tab_ui/java/res/layout -type f \( -name "*hub_search*.xml" -o -name "*search_box*.xml" \) -exec sed -i 's|<LinearLayout|<LinearLayout android:visibility="gone"|; s|<FrameLayout|<FrameLayout android:visibility="gone"|' {} +
+
+# tab group colors: remove tab group color feature and color indicators
+sed -i 's|newFlag(ChromeFeatureList.TAB_GROUP_PARITY_ANDROID, true);|newFlag(ChromeFeatureList.TAB_GROUP_PARITY_ANDROID, false);|' chrome/browser/flags/android/java/src/org/chromium/chrome/browser/flags/ChromeFeatureList.java
+find chrome/android/features/tab_ui/java/res/layout -type f -name "*tab_grid_card_item*.xml" -exec sed -i 's|id/tab_group_color_icon"|& android:visibility="gone" android:layout_width="0dp" android:layout_height="0dp"|' {} +
 
 export PATCHED=1
