@@ -84,15 +84,15 @@ jobs:
           VERSION=$(grep -m1 -o '[0-9]\+\(\.[0-9]\+\)\{3\}' vanadium/args.gn)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
-      - name: Restore Ninja build cache (out/Default)
+      - name: Restore Siso build cache (out/Default)
         if: steps.check_done.outcome != 'success'
         uses: actions/cache/restore@v4
         with:
           path: chromium/src/out/Default
-          key: ninja-out-default-${{ github.run_id }}-stage-${{ matrix.stage }}
+          key: siso-out-default-${{ github.run_id }}-stage-${{ matrix.stage }}
           restore-keys: |
-            ninja-out-default-${{ github.run_id }}-stage-
-            ninja-out-default-
+            siso-out-default-${{ github.run_id }}-stage-
+            siso-out-default-
 
       - name: Restore build cache from GitHub Release (Fallback)
         if: steps.check_done.outcome != 'success'
@@ -100,28 +100,31 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if [ ! -f chromium/src/out/Default/.ninja_log ]; then
+          if [ ! -f chromium/src/out/Default/build.ninja ]; then
             echo "Actions Cache пуст или не найден. Проверяем постоянный кэш в GitHub Releases..."
-            PREV_STAGE=$(( ${{ matrix.stage }} - 1 ))
             mkdir -p /tmp/cache_download
             cd /tmp/cache_download
             
-            # 1. Пробуем скачать кэш предыдущего этапа
-            if [ $PREV_STAGE -ge 1 ]; then
+            # 1. Если это 1-й этап, сразу начинаем с кэша 4-го этапа
+            if [ "${{ matrix.stage }}" = "1" ]; then
+              echo "Начало сборки с кэша 4-го этапа (out-default-*-stage-4.tar.zst)..."
+              gh release download build-cache -p "out-default-*-stage-4.tar.zst" || true
+            else
+              PREV_STAGE=$(( ${{ matrix.stage }} - 1 ))
               echo "Поиск кэша этапа $PREV_STAGE..."
               gh release download build-cache -p "out-default-*-stage-${PREV_STAGE}.tar.zst" || true
             fi
             
-            # 2. Если не найден, пробуем любой доступный кэш этапов
+            # 2. Если нужный этап не найден, берем кэш 4-го этапа или любой доступный кэш
             if ! ls out-default-*.tar.zst 1>/dev/null 2>&1; then
-              echo "Поиск любого доступного кэша build-cache..."
-              gh release download build-cache -p "out-default-*.tar.zst" || true
+              echo "Поиск кэша 4-го этапа в build-cache..."
+              gh release download build-cache -p "out-default-*-stage-4.tar.zst" || gh release download build-cache -p "out-default-*.tar.zst" || true
             fi
             
             # 3. Если найден архив, распаковываем его в chromium/src
             LATEST_ARCHIVE=$(ls -t out-default-*.tar.zst 2>/dev/null | head -n 1)
             if [ -n "$LATEST_ARCHIVE" ]; then
-              echo "Восстановление из постоянного релиза: $LATEST_ARCHIVE"
+              echo "Восстановление из архива: $LATEST_ARCHIVE"
               mkdir -p "$GITHUB_WORKSPACE/chromium/src"
               tar --zstd -xf "$LATEST_ARCHIVE" -C "$GITHUB_WORKSPACE/chromium/src"
               echo "Кэш успешно распакован из GitHub Release!"
@@ -141,20 +144,21 @@ jobs:
           BUILD_TIMEOUT: 330m
         run: |
           ./build.sh
-          if [ -f chromium/src/out/Default/.ninja_log ]; then
-            echo "=== Статистика сборки Ninja ==="
-            echo -n "Выполнено шагов: "
-            wc -l < chromium/src/out/Default/.ninja_log || true
+          if [ -d chromium/src/out/Default ]; then
+            echo "=== Статистика сборки Siso ==="
             echo -n "Размер папки out/Default: "
             du -sh chromium/src/out/Default || true
+            if [ -f chromium/src/out/Default/.siso_fs_state ]; then
+              echo "Файл состояния Siso (.siso_fs_state) присутствует."
+            fi
           fi
 
-      - name: Save Ninja build cache (out/Default)
+      - name: Save Siso build cache (out/Default)
         if: always() && steps.check_done.outcome != 'success'
         uses: actions/cache/save@v4
         with:
           path: chromium/src/out/Default
-          key: ninja-out-default-${{ github.run_id }}-stage-${{ matrix.stage }}
+          key: siso-out-default-${{ github.run_id }}-stage-${{ matrix.stage }}
 
       - name: Save build cache to GitHub Release (Permanent)
         if: always() && steps.check_done.outcome != 'success'
@@ -162,7 +166,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if [ -f chromium/src/out/Default/.ninja_log ]; then
+          if [ -f chromium/src/out/Default/build.ninja ]; then
             APK_READY=$(find chromium/src/out -name '*arm64-v8a.apk' 2>/dev/null | head -n 1)
             if [ -n "$APK_READY" ]; then
               echo "Финальный APK уже собран! Пропускаем выгрузку промежуточного кэша."
@@ -175,7 +179,7 @@ jobs:
             echo "Размер архива: $(du -sh "$ARCHIVE_NAME" | cut -f1)"
 
             echo "Проверка наличия релиза build-cache..."
-            gh release view build-cache >/dev/null 2>&1 || gh release create build-cache --title "Build Cache (Permanent)" --notes "Постоянное хранилище промежуточных сборок Ninja out/Default" --prerelease
+            gh release view build-cache >/dev/null 2>&1 || gh release create build-cache --title "Build Cache (Permanent)" --notes "Постоянное хранилище промежуточных сборок Siso out/Default" --prerelease
 
             echo "Выгрузка $ARCHIVE_NAME в релиз build-cache..."
             gh release upload build-cache "$ARCHIVE_NAME" --clobber
