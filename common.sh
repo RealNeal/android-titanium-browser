@@ -16,7 +16,9 @@ set_keys() {
         echo "keyAlias=androiddebugkey" > $SCRIPT_DIR/keys/local.properties
         echo "keyPassword=android" >> $SCRIPT_DIR/keys/local.properties
         echo "storePassword=android" >> $SCRIPT_DIR/keys/local.properties
-        keytool -genkey -v -keystore $SCRIPT_DIR/keys/test.jks -alias androiddebugkey -keypass android -storepass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+        if [ ! -f $SCRIPT_DIR/keys/test.jks ]; then
+            keytool -genkey -v -keystore $SCRIPT_DIR/keys/test.jks -alias androiddebugkey -keypass android -storepass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+        fi
     fi
 }
 
