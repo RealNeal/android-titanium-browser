@@ -38,9 +38,9 @@ sed -i '/#if BUILDFLAG(IS_DESKTOP_ANDROID)/{
 a\
 feature_overrides.EnableFeature(chrome::android::kSubmenusInAppMenu);\
 feature_overrides.EnableFeature(features::kAndroidDevToolsFrontend);\
-feature_overrides.EnableFeature(kAndroidMediaPicker);\
-feature_overrides.EnableFeature(features::kUserMediaScreenCapturing);\
-feature_overrides.EnableFeature(media::kAndroidEnableBackgroundMediaCapturing);\
+feature_overrides.DisableFeature(kAndroidMediaPicker);\
+feature_overrides.DisableFeature(features::kUserMediaScreenCapturing);\
+feature_overrides.DisableFeature(media::kAndroidEnableBackgroundMediaCapturing);\
 feature_overrides.EnableFeature(media::kAutoPictureInPictureAndroid);\
 feature_overrides.EnableFeature(media::kContextMenuPictureInPictureAndroid);\
 feature_overrides.EnableFeature(chrome::android::kLoadAllTabsAtStartup);\
@@ -56,8 +56,7 @@ sed -i 's|ChromeAccessibilityUtil.get().isAccessibilityEnabled()|org.chromium.ui
 sed -i 's|AccessibilityState.isPerformGesturesEnabled()|(AccessibilityState.isComplexUserInteractionServiceEnabled() \|\| AccessibilityState.isTouchExplorationEnabled())|' chrome/browser/ui/messages/android/java/src/org/chromium/chrome/browser/ui/messages/snackbar/SnackbarManager.java
 
 # dev
-# sed -i '0,/modelList.add(buildSettingsItem());/s//modelList.add(mMoreToolsItemBuilder.buildTaskManagerItem());modelList.add(mMoreToolsItemBuilder.buildDevToolsItem());&/' chrome/android/java/src/org/chromium/chrome/browser/tabbed_mode/TabbedAppMenuPropertiesDelegate.java
-sed -i '/BASE_FEATURE(kTaskManagerClank,/,/);/ s/base::FEATURE_DISABLED_BY_DEFAULT/base::FEATURE_ENABLED_BY_DEFAULT/' chrome/browser/task_manager/common/task_manager_features.cc
+sed -i 's|buildTaskManagerItem() {|buildTaskManagerItem() { if (true) return null;|' chrome/android/java/src/org/chromium/chrome/browser/tabbed_mode/MoreToolsItemBuilder.java
 if version_lt "$VERSION" "156.0.8060.0"; then
 sed -i 's|!DeviceFormFactor.isNonMultiDisplayContextOnTablet(mContext)|(false \&\& &)|' chrome/android/java/src/org/chromium/chrome/browser/tabbed_mode/MoreToolsItemBuilder.java
 sed -i 's|boolean shouldShowDeveloperMenu() {|boolean shouldShowDeveloperMenu() { if (true) return DevToolsWindowAndroid.isDevToolsAllowedFor(getProfile(), mItemDelegate.getWebContents());|' chrome/android/java/src/org/chromium/chrome/browser/contextmenu/ChromeContextMenuPopulator.java
@@ -78,9 +77,6 @@ sed -i 's|<meta charset="utf-8">|&\n<meta name="viewport" content="width=device-
 sed -i '$a@media (max-width: 600px) { .settings-window-title, .tabbed-pane-header-tab-title { display: none; } .tabbed-pane-shadow.vertical-tab-layout .tabbed-pane-header-tabs { width: auto; } }' third_party/devtools-frontend/src/front_end/panels/settings/settingsScreen.css
 sed -i 's|document_->GetSettings() ? |document_->GetSettings() \&\& !document_->IsViewSource() ? |' third_party/blink/renderer/core/css/resolver/viewport_style_resolver.cc
 sed -i 's|kViewSourceLineWrappingEnabled, false|kViewSourceLineWrappingEnabled, true|' chrome/browser/prefs/browser_prefs.cc
-
-# playback
-sed -i 's|#if BUILDFLAG(IS_ANDROID)|#if 0|' content/public/renderer/render_frame_media_playback_options.cc
 
 # ext: viewport
 sed -i 's|<meta name="color-scheme" content="light dark">|&\n<meta name="viewport" content="width=device-width">|' chrome/browser/resources/extensions/extensions.html
