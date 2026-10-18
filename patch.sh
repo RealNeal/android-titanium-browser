@@ -175,12 +175,15 @@ sed -i '/^void ProfileDestroyer::DestroyOTRProfileWhenAppropriateWithTimeout($/,
 if (content::WebContents::HasLiveWebContentsForBrowserContext(profile)) { return; }
 }' chrome/browser/profiles/profile_destroyer.cc
 
-# menu: remove tab groups, manage windows, quick delete
+# menu: remove tab groups, manage windows, quick delete, passwords & autofill, conditional forward button
 sed -i 's|mTabGroupItemBuilder.shouldShowTabGroupsParentItem(currentTab)|false|' chrome/android/java/src/org/chromium/chrome/browser/tabbed_mode/TabbedAppMenuPropertiesDelegate.java
 sed -i 's|mTabGroupItemBuilder.shouldShowAddToGroup(currentTab)|false|' chrome/android/java/src/org/chromium/chrome/browser/tabbed_mode/TabbedAppMenuPropertiesDelegate.java
 sed -i '/modelList.add(mTabGroupItemBuilder.buildNewTabGroupItemWithoutTab());/d' chrome/android/java/src/org/chromium/chrome/browser/tabbed_mode/TabbedAppMenuPropertiesDelegate.java
 sed -i 's|if (MultiWindowUtils.shouldShowManageWindowsMenu())|if (false)|g' chrome/android/java/src/org/chromium/chrome/browser/tabbed_mode/TabbedAppMenuPropertiesDelegate.java
 sed -i 's|return !isIncognitoShowing();|return false;|' chrome/android/java/src/org/chromium/chrome/browser/tabbed_mode/TabbedAppMenuPropertiesDelegate.java
+sed -i 's|return isSubmenusEnabled(mContext);|return false;|' chrome/android/java/src/org/chromium/chrome/browser/tabbed_mode/TabbedAppMenuPropertiesDelegate.java
+sed -i '/modelList.add(buildPasswordsAndAutofillParentItem());/d' chrome/android/java/src/org/chromium/chrome/browser/tabbed_mode/TabbedAppMenuPropertiesDelegate.java
+sed -i 's|iconModels\.add(buildForwardActionModel(currentTab));|if (currentTab != null \&\& currentTab.canGoForward()) { iconModels.add(buildForwardActionModel(currentTab)); }|' chrome/android/java/src/org/chromium/chrome/browser/tabbed_mode/TabbedAppMenuPropertiesDelegate.java
 
 # tab group bottom bar: remove group dialog arrow button
 sed -i 's|mShowGroupDialogButton.setVisibility(visible ? View.VISIBLE : View.GONE);|mShowGroupDialogButton.setVisibility(View.GONE);|' chrome/android/features/tab_ui/java/src/org/chromium/chrome/browser/tasks/tab_management/TabGroupUiToolbarView.java
