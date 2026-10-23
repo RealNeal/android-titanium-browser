@@ -24,23 +24,19 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
-        with:
-          submodules: true
 
-      - name: Update Vanadium
-        continue-on-error: true
+      - name: Setup Vanadium
         run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          if [ ! -d "vanadium/.git" ]; then
+            rm -rf vanadium
+            git clone https://github.com/GrapheneOS/Vanadium.git vanadium
+          fi
           cd vanadium
           git fetch --tags
-          git checkout $(git tag | sort -V | tail -n1)
+          LATEST_TAG=$(git tag | sort -V | tail -n1)
+          echo "Checking out latest Vanadium tag: $LATEST_TAG"
+          git checkout "$LATEST_TAG"
           cd ..
-          git add vanadium
-          if ! git diff --staged --quiet; then
-            git commit -am "update"
-            git push || true
-          fi
 
       - name: Set ENV
         run: |
