@@ -13,10 +13,12 @@ if [ ! -d depot_tools ]; then
 fi
 export PATH="$PWD/depot_tools:$PATH"
 mkdir -p chromium/src/out/Default; cd chromium/src
-git init
-git remote add origin $CHROMIUM_SOURCE
+if [ ! -d .git ]; then
+  git init
+fi
+git remote set-url origin $CHROMIUM_SOURCE 2>/dev/null || git remote add origin $CHROMIUM_SOURCE
 git fetch --depth 1 $CHROMIUM_SOURCE +refs/tags/$VERSION:chromium_$VERSION
-git checkout $VERSION
+git checkout -f $VERSION
 cp $SCRIPT_DIR/.gclient ../.gclient
 
 # https://grapheneos.org/build#browser-and-webview

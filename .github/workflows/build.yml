@@ -27,16 +27,43 @@ jobs:
 
       - name: Setup Vanadium
         run: |
-          if [ ! -d "vanadium/.git" ]; then
-            rm -rf vanadium
-            git clone https://github.com/GrapheneOS/Vanadium.git vanadium
+          LATEST_TAG=$(git ls-remote --tags --sort='v:refname' https://github.com/GrapheneOS/Vanadium.git 2>/dev/null | grep -o 'refs/tags/[0-9].*' | sed 's#refs/tags/##; s#\^{}##' | sort -V | tail -n1 || true)
+          if [ -z "$LATEST_TAG" ]; then
+            LATEST_TAG="156.0.8078.47.0"
           fi
-          cd vanadium
-          git fetch --tags
-          LATEST_TAG=$(git tag | sort -V | tail -n1)
-          echo "Checking out latest Vanadium tag: $LATEST_TAG"
-          git checkout "$LATEST_TAG"
-          cd ..
+          echo "Target Vanadium tag: $LATEST_TAG"
+
+          rm -rf vanadium
+          mkdir -p vanadium
+
+          if [ -d "/home/ubuntu/vanadium_cache/$LATEST_TAG" ]; then
+            echo "Using cached Vanadium $LATEST_TAG from runner host"
+            cp -r "/home/ubuntu/vanadium_cache/$LATEST_TAG/"* vanadium/
+          elif [ -f "/home/ubuntu/vanadium_cache/vanadium_$LATEST_TAG.tar.gz" ]; then
+            echo "Extracting cached tarball for $LATEST_TAG"
+            tar -xzf "/home/ubuntu/vanadium_cache/vanadium_$LATEST_TAG.tar.gz" --strip-components=1 -C vanadium/
+          else
+            echo "Downloading Vanadium archive for $LATEST_TAG..."
+            if curl -fL --retry 5 --retry-delay 3 --http1.1 "https://github.com/GrapheneOS/Vanadium/archive/refs/tags/$LATEST_TAG.tar.gz" -o /tmp/v.tar.gz; then
+              tar -xzf /tmp/v.tar.gz --strip-components=1 -C vanadium/
+              mkdir -p "/home/ubuntu/vanadium_cache/$LATEST_TAG"
+              cp -r vanadium/* "/home/ubuntu/vanadium_cache/$LATEST_TAG/"
+              rm -f /tmp/v.tar.gz
+            else
+              echo "Warning: Download failed, falling back to existing cache..."
+              EXISTING_CACHE=$(find /home/ubuntu/vanadium_cache/ -maxdepth 1 -mindepth 1 -type d | sort -V | tail -n1)
+              if [ -n "$EXISTING_CACHE" ]; then
+                echo "Using fallback cache from $EXISTING_CACHE"
+                cp -r "$EXISTING_CACHE/"* vanadium/
+              else
+                echo "Error: No Vanadium source or cache available!"
+                exit 1
+              fi
+            fi
+          fi
+
+          echo "Vanadium setup completed. args.gn version:"
+          grep -m1 -o '[0-9]\+\(\.[0-9]\+\)\{3\}' vanadium/args.gn || true
 
       - name: Set ENV
         run: |
