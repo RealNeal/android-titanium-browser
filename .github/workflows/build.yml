@@ -90,6 +90,9 @@ jobs:
             export VERSION=$(basename "$APK_FILE" -arm64-v8a.apk)
             echo "VERSION=$VERSION" >> $GITHUB_ENV
             cp "$APK_FILE" "$VERSION-${{ env.unix_time }}-arm64-v8a.apk"
+          else
+            echo "ERROR: Target arm64-v8a APK not found in chromium/src/out/release!"
+            exit 1
           fi
 
       - name: Upload APKs Artifacts
@@ -101,7 +104,7 @@ jobs:
             *.apk
             chromium/src/out/release/*.apk
             chromium/src/out/tmp/*.apk
-          if-no-files-found: warn
+          if-no-files-found: error
 
       - name: Publish
         continue-on-error: true

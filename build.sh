@@ -1,11 +1,13 @@
 #!/bin/bash
+set -e
 source common.sh
 set_keys
 export VERSION=$(grep -m1 -o '[0-9]\+\(\.[0-9]\+\)\{3\}' vanadium/args.gn)
 export CHROMIUM_SOURCE=https://chromium.googlesource.com/chromium/src.git # https://github.com/chromium/chromium.git
 export DEBIAN_FRONTEND=noninteractive
+sudo dpkg --configure -a
 sudo apt-get update
-sudo apt-get install -y sudo lsb-release file nano git curl python3 python3-pillow imagemagick librsvg2-bin
+sudo apt-get install -y sudo lsb-release file nano git curl python3 python3-pillow imagemagick librsvg2-bin bzip2
 sudo dpkg --add-architecture i386; sudo apt-get update; sudo apt-get install -y libgcc-s1:i386
 
 if [ ! -d depot_tools ]; then
@@ -36,8 +38,8 @@ git config --global user.email 'github-actions[bot]@users.noreply.github.com'
 git am --whitespace=nowarn --keep-non-patch $SCRIPT_DIR/vanadium/patches/*.patch
 
 gclient sync -D --no-history --nohooks
-gclient runhooks
 ./build/install-build-deps.sh --no-prompt
+gclient runhooks
 
 source $SCRIPT_DIR/patch.sh
 
@@ -66,10 +68,12 @@ else
 fi
 
 APK_FILE=$(find out/Default/apks -name 'Chrome*.apk' 2>/dev/null | head -n 1)
-if [ -n "$APK_FILE" ]; then
-  mv "$APK_FILE" out/tmp/$VERSION-arm64-v8a.apk
-  export PATH=$PWD/third_party/jdk/current/bin/:$PATH
-  export ANDROID_HOME=$PWD/third_party/android_sdk/public
-  sign_apk out/tmp/$VERSION-arm64-v8a.apk out/release/$VERSION-arm64-v8a.apk
-  rm -rf $SCRIPT_DIR/keys
+if [ -z "$APK_FILE" ]; then
+  echo "ERROR: Chrome*.apk was not found in out/Default/apks!"
+  exit 1
 fi
+mv "$APK_FILE" out/tmp/$VERSION-arm64-v8a.apk
+export PATH=$PWD/third_party/jdk/current/bin/:$PATH
+export ANDROID_HOME=$PWD/third_party/android_sdk/public
+sign_apk out/tmp/$VERSION-arm64-v8a.apk out/release/$VERSION-arm64-v8a.apk
+rm -rf $SCRIPT_DIR/keys
