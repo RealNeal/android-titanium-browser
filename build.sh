@@ -46,7 +46,7 @@ source $SCRIPT_DIR/patch.sh
 # Синхронизация меток времени: устанавливаем дату коммита для исходников Chromium,
 # чтобы они гарантированно были старее любых скомпилированных объектов в сохраненном out/Default
 echo "Синхронизация меток времени исходников Chromium..."
-COMMIT_TIME=$(git log -1 --format=%ct)
+COMMIT_TIME=$(git log -1 --format=%ct $VERSION)
 find . -name '.git' -prune -o -name 'out' -prune -o -type f -exec touch -d "@$COMMIT_TIME" {} +
 
 cp $SCRIPT_DIR/args.gn out/Default/args.gn
