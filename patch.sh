@@ -36,6 +36,7 @@ done
 sed -i 's|newFlag(OmniboxFeatureList.OMNIBOX_SITE_SEARCH, FeatureState.ENABLED_IN_TEST);|newFlag(OmniboxFeatureList.OMNIBOX_SITE_SEARCH, FeatureState.ENABLED_IN_PROD);|' components/omnibox/common/android/java/src/org/chromium/components/omnibox/OmniboxFeatures.java # search
 sed -i 's|BASE_FEATURE(kOmniboxSiteSearch, DISABLED);|BASE_FEATURE(kOmniboxSiteSearch, ENABLED);|' components/omnibox/common/omnibox_features.cc # search
 
+if version_lt "$VERSION" "156.0.8000.0"; then
 sed -i '/#if BUILDFLAG(IS_DESKTOP_ANDROID)/{
 a\
 feature_overrides.EnableFeature(chrome::android::kSubmenusInAppMenu);\
@@ -51,6 +52,21 @@ feature_overrides.DisableFeature(chrome::android::kAndroidHubSearch);\
 feature_overrides.DisableFeature(chrome::android::kTabGroupParityAndroid);\
 #if 0
 d}' chrome/browser/chrome_browser_field_trials.cc
+else
+sed -i '/#if BUILDFLAG(IS_DESKTOP_ANDROID)/{
+a\
+feature_overrides.EnableFeature(chrome::android::kSubmenusInAppMenu);\
+feature_overrides.EnableFeature(features::kAndroidDevToolsFrontend);\
+feature_overrides.DisableFeature(kAndroidMediaPicker);\
+feature_overrides.DisableFeature(features::kUserMediaScreenCapturing);\
+feature_overrides.DisableFeature(media::kAndroidEnableBackgroundMediaCapturing);\
+feature_overrides.EnableFeature(media::kAutoPictureInPictureAndroid);\
+feature_overrides.EnableFeature(media::kContextMenuPictureInPictureAndroid);\
+feature_overrides.EnableFeature(chrome::android::kLoadAllTabsAtStartup);\
+feature_overrides.EnableFeature(chrome::android::kChromeNativeUrlOverriding);\
+#if 0
+d}' chrome/browser/chrome_browser_field_trials.cc
+fi
 sed -i '/^bool ShouldFallbackToSWIfGLES3NotSupported() {$/,/^}$/ s|^  return true;$|  return false;|' ui/gl/gl_features.cc # virt
 
 # accessibility
