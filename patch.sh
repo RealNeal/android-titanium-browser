@@ -191,14 +191,149 @@ sed -i '/^void ProfileDestroyer::DestroyOTRProfileWhenAppropriateWithTimeout($/,
 if (content::WebContents::HasLiveWebContentsForBrowserContext(profile)) { return; }
 }' chrome/browser/profiles/profile_destroyer.cc
 
-# menu: dynamic toggles for tab groups, manage windows, quick delete, passwords & autofill, conditional forward button
-sed -i 's|mTabGroupItemBuilder.shouldShowTabGroupsParentItem(currentTab)|(!org.chromium.base.ContextUtils.getAppSharedPreferences().getBoolean("ui_hide_menu_tab_groups", true) \&\& mTabGroupItemBuilder.shouldShowTabGroupsParentItem(currentTab))|' chrome/android/java/src/org/chromium/chrome/browser/tabbed_mode/TabbedAppMenuPropertiesDelegate.java
-sed -i 's|mTabGroupItemBuilder.shouldShowAddToGroup(currentTab)|(!org.chromium.base.ContextUtils.getAppSharedPreferences().getBoolean("ui_hide_menu_tab_groups", true) \&\& mTabGroupItemBuilder.shouldShowAddToGroup(currentTab))|' chrome/android/java/src/org/chromium/chrome/browser/tabbed_mode/TabbedAppMenuPropertiesDelegate.java
-sed -i 's|modelList.add(mTabGroupItemBuilder.buildNewTabGroupItemWithoutTab());|if (!org.chromium.base.ContextUtils.getAppSharedPreferences().getBoolean("ui_hide_menu_tab_groups", true)) { modelList.add(mTabGroupItemBuilder.buildNewTabGroupItemWithoutTab()); }|' chrome/android/java/src/org/chromium/chrome/browser/tabbed_mode/TabbedAppMenuPropertiesDelegate.java
-sed -i 's|if (MultiWindowUtils.shouldShowManageWindowsMenu())|if (!org.chromium.base.ContextUtils.getAppSharedPreferences().getBoolean("ui_hide_menu_manage_windows", true) \&\& MultiWindowUtils.shouldShowManageWindowsMenu())|g' chrome/android/java/src/org/chromium/chrome/browser/tabbed_mode/TabbedAppMenuPropertiesDelegate.java
-sed -i 's|return !isIncognitoShowing();|return !org.chromium.base.ContextUtils.getAppSharedPreferences().getBoolean("ui_hide_menu_quick_delete", true) \&\& !isIncognitoShowing();|' chrome/android/java/src/org/chromium/chrome/browser/tabbed_mode/TabbedAppMenuPropertiesDelegate.java
-sed -i 's|modelList.add(buildPasswordsAndAutofillParentItem());|if (!org.chromium.base.ContextUtils.getAppSharedPreferences().getBoolean("ui_hide_menu_passwords", true)) { modelList.add(buildPasswordsAndAutofillParentItem()); }|' chrome/android/java/src/org/chromium/chrome/browser/tabbed_mode/TabbedAppMenuPropertiesDelegate.java
-sed -i 's|iconModels\.add(buildForwardActionModel(currentTab));|if (currentTab != null \&\& currentTab.canGoForward()) { iconModels.add(buildForwardActionModel(currentTab)); }|' chrome/android/java/src/org/chromium/chrome/browser/tabbed_mode/TabbedAppMenuPropertiesDelegate.java
+# ===== COMPREHENSIVE UI TOGGLE SYSTEM =====
+# All toggles read from SharedPreferences with "ui_hide_*" / "ui_disable_*" keys
+# and are controlled via Settings -> Appearance
+
+PREFS='org.chromium.base.ContextUtils.getAppSharedPreferences()'
+DELEGATE='chrome/android/java/src/org/chromium/chrome/browser/tabbed_mode/TabbedAppMenuPropertiesDelegate.java'
+
+# --- MAIN MENU: Tab Groups ---
+sed -i "s|mTabGroupItemBuilder.shouldShowTabGroupsParentItem(currentTab)|(!${PREFS}.getBoolean(\"ui_hide_menu_tab_groups\", true) \&\& mTabGroupItemBuilder.shouldShowTabGroupsParentItem(currentTab))|" "$DELEGATE"
+sed -i "s|mTabGroupItemBuilder.shouldShowAddToGroup(currentTab)|(!${PREFS}.getBoolean(\"ui_hide_menu_tab_groups\", true) \&\& mTabGroupItemBuilder.shouldShowAddToGroup(currentTab))|" "$DELEGATE"
+sed -i "s|modelList.add(mTabGroupItemBuilder.buildNewTabGroupItemWithoutTab());|if (!${PREFS}.getBoolean(\"ui_hide_menu_tab_groups\", true)) { modelList.add(mTabGroupItemBuilder.buildNewTabGroupItemWithoutTab()); }|" "$DELEGATE"
+
+# --- MAIN MENU: Manage Windows ---
+sed -i "s|if (MultiWindowUtils.shouldShowManageWindowsMenu())|if (!${PREFS}.getBoolean(\"ui_hide_menu_manage_windows\", true) \&\& MultiWindowUtils.shouldShowManageWindowsMenu())|g" "$DELEGATE"
+
+# --- MAIN MENU: Quick Delete ---
+sed -i "s|return !isIncognitoShowing();|return !${PREFS}.getBoolean(\"ui_hide_menu_quick_delete\", true) \&\& !isIncognitoShowing();|" "$DELEGATE"
+
+# --- MAIN MENU: Passwords & Autofill ---
+sed -i "s|modelList.add(buildPasswordsAndAutofillParentItem());|if (!${PREFS}.getBoolean(\"ui_hide_menu_passwords\", true)) { modelList.add(buildPasswordsAndAutofillParentItem()); }|" "$DELEGATE"
+
+# --- ICON ROW: conditional Forward button ---
+sed -i "s|iconModels\.add(buildForwardActionModel(currentTab));|if (currentTab != null \&\& currentTab.canGoForward()) { iconModels.add(buildForwardActionModel(currentTab)); }|" "$DELEGATE"
+
+# --- MAIN MENU: New Incognito Tab ---
+sed -i "s|modelList.add(buildNewIncognitoTabItem());|if (!${PREFS}.getBoolean(\"ui_hide_menu_new_incognito_tab\", false)) { modelList.add(buildNewIncognitoTabItem()); }|g" "$DELEGATE"
+
+# --- MAIN MENU: Bookmarks ---
+sed -i "s|modelList.add(mBookmarksItemBuilder.buildBookmarksItem(|if (!${PREFS}.getBoolean(\"ui_hide_menu_bookmarks\", false)) { modelList.add(mBookmarksItemBuilder.buildBookmarksItem(|" "$DELEGATE"
+sed -i "s|modelList.add(mBookmarksItemBuilder.buildBookmarksParentItem(|if (!${PREFS}.getBoolean(\"ui_hide_menu_bookmarks\", false)) { modelList.add(mBookmarksItemBuilder.buildBookmarksParentItem(|" "$DELEGATE"
+# close the if-braces for bookmarks (the line ends with ));  need to add } )
+sed -i '/buildBookmarksItem(shouldShowIconBeforeItem));$/ s|));|)); }|' "$DELEGATE"
+sed -i '/buildBookmarksParentItem(currentTab));$/ s|));|)); }|' "$DELEGATE"
+
+# --- MAIN MENU: History ---
+sed -i "s|modelList.add(mHistoryItemBuilder.buildHistoryItem(|if (!${PREFS}.getBoolean(\"ui_hide_menu_history\", false)) { modelList.add(mHistoryItemBuilder.buildHistoryItem(|" "$DELEGATE"
+sed -i '/buildHistoryItem(shouldShowIconBeforeItem));$/ s|));|)); }|' "$DELEGATE"
+sed -i "s|modelList.add(mHistoryItemBuilder.buildHistoryParentItem());|if (!${PREFS}.getBoolean(\"ui_hide_menu_history\", false)) { modelList.add(mHistoryItemBuilder.buildHistoryParentItem()); }|" "$DELEGATE"
+
+# --- MAIN MENU: Recent Tabs ---
+sed -i "s|modelList.add(mHistoryItemBuilder.buildRecentTabsItem(|if (!${PREFS}.getBoolean(\"ui_hide_menu_recent_tabs\", false)) { modelList.add(mHistoryItemBuilder.buildRecentTabsItem(|" "$DELEGATE"
+sed -i '/buildRecentTabsItem(shouldShowIconBeforeItem));$/ s|));|)); }|' "$DELEGATE"
+
+# --- MAIN MENU: Downloads ---
+sed -i "s|modelList.add(buildDownloadsItem());|if (!${PREFS}.getBoolean(\"ui_hide_menu_downloads\", false)) { modelList.add(buildDownloadsItem()); }|g" "$DELEGATE"
+
+# --- MAIN MENU: Share ---
+sed -i "s|modelList.add(buildShareListItem(|if (!${PREFS}.getBoolean(\"ui_hide_menu_share\", false)) { modelList.add(buildShareListItem(|" "$DELEGATE"
+sed -i '/buildShareListItem(shouldShowIconBeforeItem));$/ s|));|)); }|' "$DELEGATE"
+
+# --- MAIN MENU: Find in Page ---
+sed -i "s|if (shouldShowFindInPageItem(currentTab)) modelList.add(buildFindInPageItem(currentTab));|if (!${PREFS}.getBoolean(\"ui_hide_menu_find_in_page\", false) \&\& shouldShowFindInPageItem(currentTab)) modelList.add(buildFindInPageItem(currentTab));|g" "$DELEGATE"
+
+# --- MAIN MENU: Translate ---
+sed -i "s|if (shouldShowTranslateMenuItem(currentTab)) {|if (!${PREFS}.getBoolean(\"ui_hide_menu_translate\", false) \&\& shouldShowTranslateMenuItem(currentTab)) {|g" "$DELEGATE"
+
+# --- MAIN MENU: Page Zoom ---
+sed -i "s|if (shouldShowPageZoomItem(currentTab)|if (!${PREFS}.getBoolean(\"ui_hide_menu_page_zoom\", false) \&\& shouldShowPageZoomItem(currentTab)|g" "$DELEGATE"
+
+# --- MAIN MENU: Download Page ---
+sed -i "s|if (shouldShowDownloadPageMenuItem(currentTab))|if (!${PREFS}.getBoolean(\"ui_hide_menu_download_page\", false) \&\& shouldShowDownloadPageMenuItem(currentTab))|g" "$DELEGATE"
+
+# --- MAIN MENU: Print ---
+sed -i "s|if (shouldShowPrintItem(currentTab))|if (!${PREFS}.getBoolean(\"ui_hide_menu_print\", false) \&\& shouldShowPrintItem(currentTab))|g" "$DELEGATE"
+
+# --- MAIN MENU: Add to Home Screen / Install App ---
+sed -i "s|if (shouldShowHomeScreenMenuItem(|if (!${PREFS}.getBoolean(\"ui_hide_menu_add_to_homescreen\", false) \&\& shouldShowHomeScreenMenuItem(|" "$DELEGATE"
+
+# --- MAIN MENU: Request Desktop Site ---
+sed -i "s|if (rdsListItem != null) modelList.add(rdsListItem);|if (!${PREFS}.getBoolean(\"ui_hide_menu_desktop_site\", false) \&\& rdsListItem != null) modelList.add(rdsListItem);|g" "$DELEGATE"
+
+# --- MAIN MENU: Auto Dark ---
+sed -i "s|if (shouldShowAutoDarkItem(currentTab, isNativePage))|if (!${PREFS}.getBoolean(\"ui_hide_menu_auto_dark\", false) \&\& shouldShowAutoDarkItem(currentTab, isNativePage))|g" "$DELEGATE"
+
+# --- MAIN MENU: Read Aloud ---
+sed -i "s|observeAndMaybeAddReadAloud(modelList, currentTab);|if (!${PREFS}.getBoolean(\"ui_hide_menu_read_aloud\", false)) { observeAndMaybeAddReadAloud(modelList, currentTab); }|g" "$DELEGATE"
+
+# --- MAIN MENU: Reader Mode ---
+sed -i "s|if (mMoreToolsItemBuilder.shouldShowReaderModeItem(currentTab))|if (!${PREFS}.getBoolean(\"ui_hide_menu_reader_mode\", false) \&\& mMoreToolsItemBuilder.shouldShowReaderModeItem(currentTab))|g" "$DELEGATE"
+
+# --- MAIN MENU: Extensions ---
+sed -i "s|if (shouldShowExtensionsItem())|if (!${PREFS}.getBoolean(\"ui_hide_menu_extensions\", false) \&\& shouldShowExtensionsItem())|g" "$DELEGATE"
+
+# --- MAIN MENU: Lens Overlay ---
+sed -i "s|if (shouldShowLensOverlayItem(currentTab)) modelList.add(buildLensOverlayItem(currentTab));|if (!${PREFS}.getBoolean(\"ui_hide_menu_lens_overlay\", false) \&\& shouldShowLensOverlayItem(currentTab)) modelList.add(buildLensOverlayItem(currentTab));|g" "$DELEGATE"
+
+# --- MAIN MENU: Price Tracking ---
+sed -i "s|if (priceTrackingItem != null) modelList.add(priceTrackingItem);|if (!${PREFS}.getBoolean(\"ui_hide_menu_price_tracking\", false) \&\& priceTrackingItem != null) modelList.add(priceTrackingItem);|g" "$DELEGATE"
+
+# --- MAIN MENU: NTP Customizations ---
+sed -i "s|if (mMoreToolsItemBuilder.shouldShowNtpCustomizations(currentTab))|if (!${PREFS}.getBoolean(\"ui_hide_menu_ntp_customizations\", false) \&\& mMoreToolsItemBuilder.shouldShowNtpCustomizations(currentTab))|g" "$DELEGATE"
+
+# --- MAIN MENU: Help ---
+sed -i "s|modelList.add(buildHelpItem());|if (!${PREFS}.getBoolean(\"ui_hide_menu_help\", false)) { modelList.add(buildHelpItem()); }|g" "$DELEGATE"
+sed -i "s|modelList.add(buildHelpParentItem());|if (!${PREFS}.getBoolean(\"ui_hide_menu_help\", false)) { modelList.add(buildHelpParentItem()); }|g" "$DELEGATE"
+
+# --- MAIN MENU: Managed By ---
+sed -i "s|if (shouldShowManagedByMenuItem(currentTab))|if (!${PREFS}.getBoolean(\"ui_hide_menu_managed_by\", false) \&\& shouldShowManagedByMenuItem(currentTab))|g" "$DELEGATE"
+
+# --- MAIN MENU: Open With / Open in App ---
+sed -i "s|if (shouldShowOpenWithItem(currentTab))|if (!${PREFS}.getBoolean(\"ui_hide_menu_open_with\", false) \&\& shouldShowOpenWithItem(currentTab))|g" "$DELEGATE"
+sed -i "s|if (shouldShowOpenInAppItem())|if (!${PREFS}.getBoolean(\"ui_hide_menu_open_with\", false) \&\& shouldShowOpenInAppItem())|g" "$DELEGATE"
+
+# --- MAIN MENU: Glic ---
+sed -i "s|if (openGlicItem != null) modelList.add(openGlicItem);|if (!${PREFS}.getBoolean(\"ui_hide_menu_glic\", false) \&\& openGlicItem != null) modelList.add(openGlicItem);|g" "$DELEGATE"
+
+# --- MAIN MENU: TTC ---
+sed -i "s|if (ttcItem != null) modelList.add(ttcItem);|if (!${PREFS}.getBoolean(\"ui_hide_menu_ttc\", false) \&\& ttcItem != null) modelList.add(ttcItem);|g" "$DELEGATE"
+
+# --- MAIN MENU: More Tools ---
+sed -i "s|if (mMoreToolsItemBuilder.shouldShowMoreToolsItem(currentTab))|if (!${PREFS}.getBoolean(\"ui_hide_menu_more_tools\", false) \&\& mMoreToolsItemBuilder.shouldShowMoreToolsItem(currentTab))|g" "$DELEGATE"
+
+# --- MAIN MENU: Save & Share ---
+sed -i "s|if (shouldShowSaveAndShareItem(|if (!${PREFS}.getBoolean(\"ui_hide_menu_save_share\", false) \&\& shouldShowSaveAndShareItem(|" "$DELEGATE"
+
+# --- MAIN MENU: Paint Preview ---
+sed -i "s|if (mSaveAndShareItemBuilder.shouldShowPaintPreview(|if (!${PREFS}.getBoolean(\"ui_hide_menu_save_share\", false) \&\& mSaveAndShareItemBuilder.shouldShowPaintPreview(|" "$DELEGATE"
+
+# --- MAIN MENU: Image Descriptions ---
+sed -i "s|if (shouldShowGetImageDescriptionsItem(currentTab))|if (!${PREFS}.getBoolean(\"ui_hide_menu_image_descriptions\", false) \&\& shouldShowGetImageDescriptionsItem(currentTab))|g" "$DELEGATE"
+
+# --- MAIN MENU: Listen to Feed ---
+sed -i "s|if (shouldShowListenToFeedItem(currentTab))|if (!${PREFS}.getBoolean(\"ui_hide_menu_listen_feed\", false) \&\& shouldShowListenToFeedItem(currentTab))|g" "$DELEGATE"
+
+# --- MAIN MENU: Content Filter Help ---
+sed -i "s|if (shouldShowContentFilterHelpCenterMenuItem())|if (!${PREFS}.getBoolean(\"ui_hide_menu_content_filter\", false) \&\& shouldShowContentFilterHelpCenterMenuItem())|g" "$DELEGATE"
+
+# --- MAIN MENU: Homepage ---
+sed -i "s|HomepageManager.getInstance().shouldShowHomepageMenuItem()|(!${PREFS}.getBoolean(\"ui_hide_menu_homepage\", false) \&\& HomepageManager.getInstance().shouldShowHomepageMenuItem())|g" "$DELEGATE"
+
+# --- MAIN MENU: New Window / Move to Other Window / New Incognito Window ---
+sed -i "s|if (shouldShowNewWindow())|if (!${PREFS}.getBoolean(\"ui_hide_menu_new_window\", false) \&\& shouldShowNewWindow())|g" "$DELEGATE"
+sed -i "s|if (shouldShowNewIncognitoWindow())|if (!${PREFS}.getBoolean(\"ui_hide_menu_new_incognito_window\", false) \&\& shouldShowNewIncognitoWindow())|g" "$DELEGATE"
+sed -i "s|if (shouldShowMoveToOtherWindow())|if (!${PREFS}.getBoolean(\"ui_hide_menu_move_to_window\", false) \&\& shouldShowMoveToOtherWindow())|g" "$DELEGATE"
+
+# --- OVERVIEW MENU: Close All Tabs ---
+sed -i "s|modelList.add(buildCloseAllTabsItem());|if (!${PREFS}.getBoolean(\"ui_hide_menu_close_all_tabs\", false)) { modelList.add(buildCloseAllTabsItem()); }|" "$DELEGATE"
+
+# --- OVERVIEW MENU: Select Tabs ---
+sed -i "s|if (shouldShowSelectTabsItem()) modelList.add(buildSelectTabsItem());|if (!${PREFS}.getBoolean(\"ui_hide_menu_select_tabs\", false) \&\& shouldShowSelectTabsItem()) modelList.add(buildSelectTabsItem());|" "$DELEGATE"
+
+# --- MAIN MENU: Update Item ---
+sed -i "s|if (mUpdateMenuItemVisible) {|if (!${PREFS}.getBoolean(\"ui_hide_menu_update\", false) \&\& mUpdateMenuItemVisible) {|" "$DELEGATE"
 
 # tab group bottom bar: remove group dialog arrow button, fading edge overlays, and support dynamic hiding via preferences
 sed -i 's|mShowGroupDialogButton.setVisibility(visible ? View.VISIBLE : View.GONE);|mShowGroupDialogButton.setVisibility(View.GONE);|' chrome/android/features/tab_ui/java/src/org/chromium/chrome/browser/tasks/tab_management/TabGroupUiToolbarView.java
@@ -221,8 +356,80 @@ sed -i 's|public boolean isVoiceSearchEnabled() {|& if (org.chromium.base.Contex
 # promos: disable default browser promos if toggled
 sed -i 's|shouldShowPromo(|&!org.chromium.base.ContextUtils.getAppSharedPreferences().getBoolean("ui_disable_default_browser_promo", true) \&\& |' chrome/browser/ui/android/default_browser_promo/java/src/org/chromium/chrome/browser/ui/default_browser_promo/DefaultBrowserPromoUtils.java
 
-# ui customization preferences: add comprehensive categories and toggles to Settings -> Appearance (appearance_preferences.xml)
-sed -i 's|</PreferenceScreen>|    <PreferenceCategory android:title="Нижняя панель и вкладки" android:order="10">\n        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_bottom_tab_strip" android:title="Скрыть нижнюю панель вкладок" android:summary="Полностью убирает полосу открытых вкладок снизу" android:defaultValue="false" />\n        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_new_tab_button" android:title="Скрыть кнопку новой вкладки (+)" android:summary="Убирает кнопку добавления новой вкладки на нижней панели" android:defaultValue="false" />\n    </PreferenceCategory>\n    <PreferenceCategory android:title="Главное меню (три точки)" android:order="11">\n        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_tab_groups" android:title="Скрыть группы вкладок в меню" android:summary="Убирает пункты управления группами из меню трёх точек" android:defaultValue="true" />\n        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_manage_windows" android:title="Скрыть управление окнами в меню" android:summary="Убирает пункт управления окнами из меню трёх точек" android:defaultValue="true" />\n        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_passwords" android:title="Скрыть пароли в меню" android:summary="Убирает пункт паролей и автозаполнения из меню трёх точек" android:defaultValue="true" />\n        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_quick_delete" android:title="Скрыть быструю очистку в меню" android:summary="Убирает пункт быстрого удаления данных из меню трёх точек" android:defaultValue="true" />\n    </PreferenceCategory>\n    <PreferenceCategory android:title="Адресная строка и тулбар" android:order="12">\n        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_home_button" android:title="Скрыть кнопку Домой" android:summary="Убирает значок домика на верхней панели" android:defaultValue="false" />\n        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_voice_search" android:title="Скрыть значок микрофона" android:summary="Убирает голосовой ввод из адресной строки" android:defaultValue="false" />\n        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_lens_button" android:title="Скрыть значок камеры (Lens)" android:summary="Убирает сканер QR и поиск по камере" android:defaultValue="false" />\n    </PreferenceCategory>\n    <PreferenceCategory android:title="Уведомления и промо" android:order="13">\n        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_disable_default_browser_promo" android:title="Скрыть промо Браузер по умолчанию" android:summary="Блокирует всплывающие предложения сделать браузер основным" android:defaultValue="true" />\n    </PreferenceCategory>\n</PreferenceScreen>|' chrome/android/java/res/xml/appearance_preferences.xml
+# ui customization preferences: comprehensive categories and toggles in Settings -> Appearance (appearance_preferences.xml)
+cat > /tmp/titanium_prefs_patch.xml << 'PREFS_EOF'
+    <PreferenceCategory android:title="Нижняя панель и вкладки" android:order="10">
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_bottom_tab_strip" android:title="Скрыть нижнюю панель вкладок" android:summary="Полностью убирает полосу открытых вкладок снизу" android:defaultValue="false" />
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_new_tab_button" android:title="Скрыть кнопку новой вкладки (+)" android:summary="Убирает кнопку добавления новой вкладки на нижней панели" android:defaultValue="false" />
+    </PreferenceCategory>
+    <PreferenceCategory android:title="Меню: Основное" android:order="11">
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_tab_groups" android:title="Скрыть группы вкладок" android:summary="Убирает все пункты групп вкладок" android:defaultValue="true" />
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_new_incognito_tab" android:title="Скрыть Новая вкладка Инкогнито" android:summary="Убирает пункт открытия инкогнито-вкладки" android:defaultValue="false" />
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_manage_windows" android:title="Скрыть Управление окнами" android:summary="Убирает пункт управления окнами" android:defaultValue="true" />
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_new_window" android:title="Скрыть Новое окно" android:summary="Убирает пункт открытия нового окна" android:defaultValue="false" />
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_new_incognito_window" android:title="Скрыть Новое окно Инкогнито" android:summary="Убирает пункт открытия инкогнито-окна" android:defaultValue="false" />
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_move_to_window" android:title="Скрыть Переместить в другое окно" android:summary="Убирает пункт перемещения вкладки" android:defaultValue="false" />
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_passwords" android:title="Скрыть Пароли и автозаполнение" android:summary="Убирает пункт паролей из меню" android:defaultValue="true" />
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_quick_delete" android:title="Скрыть Быстрое удаление" android:summary="Убирает пункт быстрого удаления данных" android:defaultValue="true" />
+    </PreferenceCategory>
+    <PreferenceCategory android:title="Меню: Навигация" android:order="12">
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_bookmarks" android:title="Скрыть Закладки" android:summary="Убирает пункт закладок из меню" android:defaultValue="false" />
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_history" android:title="Скрыть Историю" android:summary="Убирает пункт истории просмотров" android:defaultValue="false" />
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_recent_tabs" android:title="Скрыть Недавние вкладки" android:summary="Убирает пункт недавних вкладок" android:defaultValue="false" />
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_downloads" android:title="Скрыть Загрузки" android:summary="Убирает пункт загрузок из меню" android:defaultValue="false" />
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_homepage" android:title="Скрыть Домашнюю страницу" android:summary="Убирает пункт перехода на домашнюю страницу" android:defaultValue="false" />
+    </PreferenceCategory>
+    <PreferenceCategory android:title="Меню: Контент страницы" android:order="13">
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_share" android:title="Скрыть Поделиться" android:summary="Убирает пункт Поделиться из меню" android:defaultValue="false" />
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_find_in_page" android:title="Скрыть Найти на странице" android:summary="Убирает поиск по тексту страницы" android:defaultValue="false" />
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_translate" android:title="Скрыть Перевод" android:summary="Убирает пункт перевода страницы" android:defaultValue="false" />
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_page_zoom" android:title="Скрыть Масштаб страницы" android:summary="Убирает управление масштабом" android:defaultValue="false" />
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_desktop_site" android:title="Скрыть Версия для ПК" android:summary="Убирает переключатель десктопной версии" android:defaultValue="false" />
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_auto_dark" android:title="Скрыть Авто-тёмная тема" android:summary="Убирает переключатель тёмного режима страниц" android:defaultValue="false" />
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_read_aloud" android:title="Скрыть Озвучивание" android:summary="Убирает озвучивание текста страницы" android:defaultValue="false" />
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_reader_mode" android:title="Скрыть Режим чтения" android:summary="Убирает пункт упрощённого режима" android:defaultValue="false" />
+    </PreferenceCategory>
+    <PreferenceCategory android:title="Меню: Инструменты" android:order="14">
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_download_page" android:title="Скрыть Скачать страницу" android:summary="Убирает пункт скачивания страницы" android:defaultValue="false" />
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_print" android:title="Скрыть Печать" android:summary="Убирает пункт печати" android:defaultValue="false" />
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_add_to_homescreen" android:title="Скрыть На главный экран" android:summary="Убирает добавление сайта на рабочий стол" android:defaultValue="false" />
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_extensions" android:title="Скрыть Расширения" android:summary="Убирает пункт расширений из меню" android:defaultValue="false" />
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_more_tools" android:title="Скрыть Ещё инструменты" android:summary="Убирает подменю Ещё инструменты" android:defaultValue="false" />
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_save_share" android:title="Скрыть Сохранить и поделиться" android:summary="Убирает подменю сохранения и публикации" android:defaultValue="false" />
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_open_with" android:title="Скрыть Открыть в приложении" android:summary="Убирает Открыть с.../В приложении" android:defaultValue="false" />
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_lens_overlay" android:title="Скрыть Lens Overlay" android:summary="Убирает пункт сканера контента Lens" android:defaultValue="false" />
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_price_tracking" android:title="Скрыть Отслеживание цен" android:summary="Убирает отслеживание цен на товары" android:defaultValue="false" />
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_image_descriptions" android:title="Скрыть Описания изображений" android:summary="Убирает получение описаний для картинок" android:defaultValue="false" />
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_listen_feed" android:title="Скрыть Прослушать ленту" android:summary="Убирает озвучивание ленты новостей" android:defaultValue="false" />
+    </PreferenceCategory>
+    <PreferenceCategory android:title="Меню: Системное" android:order="15">
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_help" android:title="Скрыть Справку" android:summary="Убирает пункт Справка и отзыв" android:defaultValue="false" />
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_update" android:title="Скрыть Обновление" android:summary="Убирает баннер обновления из меню" android:defaultValue="false" />
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_managed_by" android:title="Скрыть Управляется организацией" android:summary="Убирает корпоративную метку" android:defaultValue="false" />
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_content_filter" android:title="Скрыть Фильтр контента" android:summary="Убирает ссылку на центр помощи по фильтрации" android:defaultValue="false" />
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_ntp_customizations" android:title="Скрыть Настройки NTP" android:summary="Убирает настройки новой вкладки из меню" android:defaultValue="false" />
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_glic" android:title="Скрыть Glic (AI)" android:summary="Убирает пункт AI-ассистента Glic" android:defaultValue="false" />
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_ttc" android:title="Скрыть TTC" android:summary="Убирает сессии Tab-to-Cloud" android:defaultValue="false" />
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_close_all_tabs" android:title="Скрыть Закрыть все вкладки" android:summary="Убирает из обзорного меню" android:defaultValue="false" />
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_menu_select_tabs" android:title="Скрыть Выбрать вкладки" android:summary="Убирает из обзорного меню" android:defaultValue="false" />
+    </PreferenceCategory>
+    <PreferenceCategory android:title="Адресная строка и тулбар" android:order="16">
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_home_button" android:title="Скрыть кнопку Домой" android:summary="Убирает значок домика на верхней панели" android:defaultValue="false" />
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_voice_search" android:title="Скрыть значок микрофона" android:summary="Убирает голосовой ввод из адресной строки" android:defaultValue="false" />
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_hide_lens_button" android:title="Скрыть значок камеры (Lens)" android:summary="Убирает сканер QR и поиск по камере" android:defaultValue="false" />
+    </PreferenceCategory>
+    <PreferenceCategory android:title="Уведомления и промо" android:order="17">
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_disable_default_browser_promo" android:title="Скрыть промо Браузер по умолчанию" android:summary="Блокирует всплывающие предложения сделать браузер основным" android:defaultValue="true" />
+    </PreferenceCategory>
+    <PreferenceCategory android:title="Новая вкладка (NTP)" android:order="18">
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_disable_discover_feed" android:title="Скрыть ленту Discover" android:summary="Отключает ленту новостей на новой вкладке" android:defaultValue="false" />
+        <org.chromium.components.browser_ui.settings.ChromeSwitchPreference android:key="ui_disable_magic_stack" android:title="Скрыть модули Magic Stack" android:summary="Отключает карточки подсказок на новой вкладке" android:defaultValue="false" />
+    </PreferenceCategory>
+PREFS_EOF
+
+# inject the preferences XML block
+sed -i '/<\/PreferenceScreen>/{ r /tmp/titanium_prefs_patch.xml
+}' chrome/android/java/res/xml/appearance_preferences.xml
 
 # tab search: remove "Search tabs" search bar from tab switcher
 sed -i 's|newFlag(ChromeFeatureList.ANDROID_HUB_SEARCH, true);|newFlag(ChromeFeatureList.ANDROID_HUB_SEARCH, false);|' chrome/browser/flags/android/java/src/org/chromium/chrome/browser/flags/ChromeFeatureList.java
@@ -232,5 +439,11 @@ find chrome/android/features/tab_ui/java/res/layout -type f \( -name "*hub_searc
 # tab group colors: remove tab group color feature and color indicators
 sed -i 's|newFlag(ChromeFeatureList.TAB_GROUP_PARITY_ANDROID, true);|newFlag(ChromeFeatureList.TAB_GROUP_PARITY_ANDROID, false);|' chrome/browser/flags/android/java/src/org/chromium/chrome/browser/flags/ChromeFeatureList.java
 find chrome/android/features/tab_ui/java/res/layout -type f -name "*tab_grid_card_item*.xml" -exec sed -i 's|id/tab_group_color_icon"|& android:visibility="gone" android:layout_width="0dp" android:layout_height="0dp"|' {} +
+
+# NTP: disable Discover Feed if toggled
+sed -i "s|public static boolean isFeedEnabled() {|\u0026 if (${PREFS}.getBoolean(\"ui_disable_discover_feed\", false)) return false;|" chrome/browser/feed/android/java/src/org/chromium/chrome/browser/feed/FeedFeatures.java
+
+# NTP: disable Magic Stack modules if toggled
+sed -i "s|readBoolean(getSettingsPreferenceKey(moduleType),|${PREFS}.getBoolean(\"ui_disable_magic_stack\", false) ? false : readBoolean(getSettingsPreferenceKey(moduleType),|" chrome/browser/magic_stack/android/java/src/org/chromium/chrome/browser/magic_stack/HomeModulesConfigManager.java
 
 export PATCHED=1
