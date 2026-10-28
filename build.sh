@@ -37,6 +37,7 @@ git config --global user.name 'github-actions[bot]'
 git config --global user.email 'github-actions[bot]@users.noreply.github.com'
 git am --whitespace=nowarn --keep-non-patch $SCRIPT_DIR/vanadium/patches/*.patch
 
+git submodule foreach --recursive git reset --hard
 gclient sync -D --no-history --nohooks
 ./build/install-build-deps.sh --no-prompt
 gclient runhooks
