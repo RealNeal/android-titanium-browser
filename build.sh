@@ -40,6 +40,7 @@ git am --whitespace=nowarn --keep-non-patch $SCRIPT_DIR/vanadium/patches/*.patch
 git submodule foreach --recursive git reset --hard
 gclient sync -D --no-history --nohooks
 ./build/install-build-deps.sh --no-prompt
+cp -f "$SCRIPT_DIR/res/filter_list_download.py" "$SCRIPT_DIR/vanadium/tools/filter_lists/filter_list_download.py" 2>/dev/null || true
 gclient runhooks
 
 source $SCRIPT_DIR/patch.sh
