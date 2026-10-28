@@ -201,11 +201,17 @@ sed -i 's|return isSubmenusEnabled(mContext);|return false;|' chrome/android/jav
 sed -i '/modelList.add(buildPasswordsAndAutofillParentItem());/d' chrome/android/java/src/org/chromium/chrome/browser/tabbed_mode/TabbedAppMenuPropertiesDelegate.java
 sed -i 's|iconModels\.add(buildForwardActionModel(currentTab));|if (currentTab != null \&\& currentTab.canGoForward()) { iconModels.add(buildForwardActionModel(currentTab)); }|' chrome/android/java/src/org/chromium/chrome/browser/tabbed_mode/TabbedAppMenuPropertiesDelegate.java
 
-# tab group bottom bar: remove group dialog arrow button
+# tab group bottom bar: remove group dialog arrow button and fading edge overlays
 sed -i 's|mShowGroupDialogButton.setVisibility(visible ? View.VISIBLE : View.GONE);|mShowGroupDialogButton.setVisibility(View.GONE);|' chrome/android/features/tab_ui/java/src/org/chromium/chrome/browser/tasks/tab_management/TabGroupUiToolbarView.java
 sed -i 's|mShowGroupDialogButton = findViewById(R.id.toolbar_show_group_dialog_button);|& mShowGroupDialogButton.setVisibility(View.GONE);|' chrome/android/features/tab_ui/java/src/org/chromium/chrome/browser/tasks/tab_management/TabGroupUiToolbarView.java
 sed -i 's|id/toolbar_show_group_dialog_button"|& android:visibility="gone" android:layout_width="0dp" android:layout_height="0dp"|' chrome/android/features/tab_ui/java/res/layout/bottom_tab_strip_toolbar.xml
 sed -i 's|id/toolbar_show_group_dialog_button"|& android:visibility="gone" android:layout_width="0dp" android:layout_height="0dp"|' chrome/android/features/tab_ui/java/res/layout/dynamic_bottom_tab_strip_toolbar.xml
+sed -i 's|id/tab_strip_fading_edge_start"|& android:visibility="gone" android:layout_width="0dp" android:layout_height="0dp"|' chrome/android/features/tab_ui/java/res/layout/bottom_tab_strip_toolbar.xml
+sed -i 's|id/tab_strip_fading_edge_end"|& android:visibility="gone" android:layout_width="0dp" android:layout_height="0dp"|' chrome/android/features/tab_ui/java/res/layout/bottom_tab_strip_toolbar.xml
+sed -i 's|id/tab_strip_fading_edge_start"|& android:visibility="gone" android:layout_width="0dp" android:layout_height="0dp"|' chrome/android/features/tab_ui/java/res/layout/dynamic_bottom_tab_strip_toolbar.xml
+sed -i 's|id/tab_strip_fading_edge_end"|& android:visibility="gone" android:layout_width="0dp" android:layout_height="0dp"|' chrome/android/features/tab_ui/java/res/layout/dynamic_bottom_tab_strip_toolbar.xml
+sed -i 's|mFadingEdgeStart = findViewById(R.id.tab_strip_fading_edge_start);|& mFadingEdgeStart.setVisibility(View.GONE);|' chrome/android/features/tab_ui/java/src/org/chromium/chrome/browser/tasks/tab_management/TabGroupUiToolbarView.java
+sed -i 's|mFadingEdgeEnd = findViewById(R.id.tab_strip_fading_edge_end);|& mFadingEdgeEnd.setVisibility(View.GONE);|' chrome/android/features/tab_ui/java/src/org/chromium/chrome/browser/tasks/tab_management/TabGroupUiToolbarView.java
 
 # tab search: remove "Search tabs" search bar from tab switcher
 sed -i 's|newFlag(ChromeFeatureList.ANDROID_HUB_SEARCH, true);|newFlag(ChromeFeatureList.ANDROID_HUB_SEARCH, false);|' chrome/browser/flags/android/java/src/org/chromium/chrome/browser/flags/ChromeFeatureList.java
