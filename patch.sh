@@ -338,12 +338,10 @@ sed -i "s|if (mUpdateMenuItemVisible) {|if (!${PREFS}.getBoolean(\"ui_hide_menu_
 # tab group bottom bar: remove group dialog arrow button, fading edge overlays, and support dynamic hiding via preferences
 sed -i 's|mShowGroupDialogButton.setVisibility(visible ? View.VISIBLE : View.GONE);|mShowGroupDialogButton.setVisibility(View.GONE);|' chrome/android/features/tab_ui/java/src/org/chromium/chrome/browser/tasks/tab_management/TabGroupUiToolbarView.java
 sed -i 's|mShowGroupDialogButton = findViewById(R.id.toolbar_show_group_dialog_button);|& mShowGroupDialogButton.setVisibility(View.GONE);|' chrome/android/features/tab_ui/java/src/org/chromium/chrome/browser/tasks/tab_management/TabGroupUiToolbarView.java
-sed -i 's|id/toolbar_show_group_dialog_button"|& android:visibility="gone" android:layout_width="0dp" android:layout_height="0dp"|' chrome/android/features/tab_ui/java/res/layout/bottom_tab_strip_toolbar.xml
-sed -i 's|id/toolbar_show_group_dialog_button"|& android:visibility="gone" android:layout_width="0dp" android:layout_height="0dp"|' chrome/android/features/tab_ui/java/res/layout/dynamic_bottom_tab_strip_toolbar.xml
-sed -i 's|id/tab_strip_fading_edge_start"|& android:visibility="gone" android:layout_width="0dp" android:layout_height="0dp"|' chrome/android/features/tab_ui/java/res/layout/bottom_tab_strip_toolbar.xml
-sed -i 's|id/tab_strip_fading_edge_end"|& android:visibility="gone" android:layout_width="0dp" android:layout_height="0dp"|' chrome/android/features/tab_ui/java/res/layout/bottom_tab_strip_toolbar.xml
-sed -i 's|id/tab_strip_fading_edge_start"|& android:visibility="gone" android:layout_width="0dp" android:layout_height="0dp"|' chrome/android/features/tab_ui/java/res/layout/dynamic_bottom_tab_strip_toolbar.xml
-sed -i 's|id/tab_strip_fading_edge_end"|& android:visibility="gone" android:layout_width="0dp" android:layout_height="0dp"|' chrome/android/features/tab_ui/java/res/layout/dynamic_bottom_tab_strip_toolbar.xml
+sed -i 's|id/toolbar_show_group_dialog_button"|& android:visibility="gone"|' chrome/android/features/tab_ui/java/res/layout/bottom_tab_strip_toolbar.xml
+sed -i 's|id/toolbar_show_group_dialog_button"|& android:visibility="gone"|' chrome/android/features/tab_ui/java/res/layout/dynamic_bottom_tab_strip_toolbar.xml
+sed -i 's|android:layout_width="@dimen/tab_strip_fading_edge_width"|android:layout_width="0dp" android:visibility="gone"|g' chrome/android/features/tab_ui/java/res/layout/bottom_tab_strip_toolbar.xml
+sed -i 's|android:layout_width="@dimen/tab_strip_fading_edge_width"|android:layout_width="0dp" android:visibility="gone"|g' chrome/android/features/tab_ui/java/res/layout/dynamic_bottom_tab_strip_toolbar.xml
 sed -i 's|mFadingEdgeStart = findViewById(R.id.tab_strip_fading_edge_start);|& mFadingEdgeStart.setVisibility(View.GONE);|' chrome/android/features/tab_ui/java/src/org/chromium/chrome/browser/tasks/tab_management/TabGroupUiToolbarView.java
 sed -i 's|mFadingEdgeEnd = findViewById(R.id.tab_strip_fading_edge_end);|& mFadingEdgeEnd.setVisibility(View.GONE);|' chrome/android/features/tab_ui/java/src/org/chromium/chrome/browser/tasks/tab_management/TabGroupUiToolbarView.java
 sed -i 's|super.onFinishInflate();|& if (org.chromium.base.ContextUtils.getAppSharedPreferences().getBoolean("ui_hide_bottom_tab_strip", false)) { setVisibility(View.GONE); } if (org.chromium.base.ContextUtils.getAppSharedPreferences().getBoolean("ui_hide_new_tab_button", false) \&\& mNewTabButton != null) { mNewTabButton.setVisibility(View.GONE); }|' chrome/android/features/tab_ui/java/src/org/chromium/chrome/browser/tasks/tab_management/TabGroupUiToolbarView.java
@@ -447,7 +445,7 @@ find chrome/android/features/tab_ui/java/res/layout -type f \( -name "*hub_searc
 
 # tab group colors: remove tab group color feature and color indicators
 sed -i 's|newFlag(ChromeFeatureList.TAB_GROUP_PARITY_ANDROID, true);|newFlag(ChromeFeatureList.TAB_GROUP_PARITY_ANDROID, false);|' chrome/browser/flags/android/java/src/org/chromium/chrome/browser/flags/ChromeFeatureList.java
-find chrome/android/features/tab_ui/java/res/layout -type f -name "*tab_grid_card_item*.xml" -exec sed -i 's|id/tab_group_color_icon"|& android:visibility="gone" android:layout_width="0dp" android:layout_height="0dp"|' {} +
+find chrome/android/features/tab_ui/java/res/layout -type f -name "*tab_grid*.xml" -exec sed -i 's|id/tab_group_color_icon"|& android:visibility="gone"|' {} +
 
 # NTP: disable Discover Feed if toggled
 sed -i "s|public static boolean isFeedEnabled() {|\u0026 if (${PREFS}.getBoolean(\"ui_disable_discover_feed\", false)) return false;|" chrome/browser/feed/android/java/src/org/chromium/chrome/browser/feed/FeedFeatures.java
