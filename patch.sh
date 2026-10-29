@@ -427,9 +427,18 @@ cat > /tmp/titanium_prefs_patch.xml << 'PREFS_EOF'
     </PreferenceCategory>
 PREFS_EOF
 
-# inject the preferences XML block
-sed -i '/<\/PreferenceScreen>/{ r /tmp/titanium_prefs_patch.xml
-}' chrome/android/java/res/xml/appearance_preferences.xml
+# inject the preferences XML block inside <PreferenceScreen> (before </PreferenceScreen>)
+python3 -c '
+xml_file = "chrome/android/java/res/xml/appearance_preferences.xml"
+with open(xml_file, "r") as f:
+    xml = f.read()
+with open("/tmp/titanium_prefs_patch.xml", "r") as f:
+    patch = f.read()
+if "</PreferenceScreen>" in xml and "ui_hide_bottom_tab_strip" not in xml:
+    xml = xml.replace("</PreferenceScreen>", patch + "\n</PreferenceScreen>")
+    with open(xml_file, "w") as f:
+        f.write(xml)
+'
 
 # tab search: remove "Search tabs" search bar from tab switcher
 sed -i 's|newFlag(ChromeFeatureList.ANDROID_HUB_SEARCH, true);|newFlag(ChromeFeatureList.ANDROID_HUB_SEARCH, false);|' chrome/browser/flags/android/java/src/org/chromium/chrome/browser/flags/ChromeFeatureList.java
