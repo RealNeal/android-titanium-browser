@@ -352,7 +352,9 @@ sed -i 's|private void setLensButtonVisibility(boolean shouldShowLensButton) {|&
 sed -i 's|public boolean isVoiceSearchEnabled() {|& if (org.chromium.base.ContextUtils.getAppSharedPreferences().getBoolean("ui_hide_voice_search", false)) return false;|' chrome/browser/ui/android/omnibox/java/src/org/chromium/chrome/browser/omnibox/voice/VoiceRecognitionHandler.java
 
 # promos: disable default browser promos if toggled
-sed -i 's|shouldShowPromo(|&!org.chromium.base.ContextUtils.getAppSharedPreferences().getBoolean("ui_disable_default_browser_promo", true) \&\& |' chrome/browser/ui/android/default_browser_promo/java/src/org/chromium/chrome/browser/ui/default_browser_promo/DefaultBrowserPromoUtils.java
+sed -i 's|static boolean isFeatureEnabled() {|& if (org.chromium.base.ContextUtils.getAppSharedPreferences().getBoolean("ui_disable_default_browser_promo", true)) return false;|' chrome/browser/ui/android/default_browser_promo/java/src/org/chromium/chrome/browser/ui/default_browser_promo/DefaultBrowserPromoUtils.java
+sed -i 's|public boolean shouldShowNonRoleManagerPromo(Context context) {|& if (org.chromium.base.ContextUtils.getAppSharedPreferences().getBoolean("ui_disable_default_browser_promo", true)) return false;|' chrome/browser/ui/android/default_browser_promo/java/src/org/chromium/chrome/browser/ui/default_browser_promo/DefaultBrowserPromoUtils.java
+sed -i 's|public boolean shouldShowAppMenuItemEntryPoint() {|& if (org.chromium.base.ContextUtils.getAppSharedPreferences().getBoolean("ui_disable_default_browser_promo", true)) return false;|' chrome/browser/ui/android/default_browser_promo/java/src/org/chromium/chrome/browser/ui/default_browser_promo/DefaultBrowserPromoUtils.java
 
 # ui customization preferences: comprehensive categories and toggles in Settings -> Appearance (appearance_preferences.xml)
 cat > /tmp/titanium_prefs_patch.xml << 'PREFS_EOF'
@@ -448,9 +450,9 @@ sed -i 's|newFlag(ChromeFeatureList.TAB_GROUP_PARITY_ANDROID, true);|newFlag(Chr
 find chrome/android/features/tab_ui/java/res/layout -type f -name "*tab_grid*.xml" -exec sed -i 's|id/tab_group_color_icon"|& android:visibility="gone"|' {} +
 
 # NTP: disable Discover Feed if toggled
-sed -i "s|public static boolean isFeedEnabled() {|\u0026 if (${PREFS}.getBoolean(\"ui_disable_discover_feed\", false)) return false;|" chrome/browser/feed/android/java/src/org/chromium/chrome/browser/feed/FeedFeatures.java
+sed -i 's|public static boolean isFeedEnabled(Profile profile) {|& if (org.chromium.base.ContextUtils.getAppSharedPreferences().getBoolean("ui_disable_discover_feed", false)) return false;|' chrome/browser/feed/android/java/src/org/chromium/chrome/browser/feed/FeedFeatures.java
 
 # NTP: disable Magic Stack modules if toggled
-sed -i "s|readBoolean(getSettingsPreferenceKey(moduleType),|${PREFS}.getBoolean(\"ui_disable_magic_stack\", false) ? false : readBoolean(getSettingsPreferenceKey(moduleType),|" chrome/browser/magic_stack/android/java/src/org/chromium/chrome/browser/magic_stack/HomeModulesConfigManager.java
+sed -i 's|return mSharedPreferencesManager.readBoolean(getSettingsPreferenceKey(moduleType),|if (org.chromium.base.ContextUtils.getAppSharedPreferences().getBoolean("ui_disable_magic_stack", false)) return false; &|' chrome/browser/magic_stack/android/java/src/org/chromium/chrome/browser/magic_stack/HomeModulesConfigManager.java
 
 export PATCHED=1
