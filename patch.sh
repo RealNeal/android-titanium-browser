@@ -456,4 +456,11 @@ sed -i 's|public static boolean isFeedEnabled(Profile profile) {|& if (org.chrom
 # NTP: disable Magic Stack modules if toggled
 sed -i 's|return mSharedPreferencesManager.readBoolean(getSettingsPreferenceKey(moduleType),|if (org.chromium.base.ContextUtils.getAppSharedPreferences().getBoolean("ui_disable_magic_stack", false)) return false; &|' chrome/browser/magic_stack/android/java/src/org/chromium/chrome/browser/magic_stack/HomeModulesConfigManager.java
 
+# Ensure generated runtime features header is regenerated if out/Default exists but is out-of-sync
+if [ -f "out/Default/gen/third_party/blink/public/common/features_generated.h" ]; then
+  if ! grep -q "kClearCrossOriginRelatedTarget" "out/Default/gen/third_party/blink/public/common/features_generated.h"; then
+    rm -f "out/Default/gen/third_party/blink/public/common/features_generated.h"
+  fi
+fi
+
 export PATCHED=1
