@@ -266,7 +266,8 @@ sed -i "s|if (rdsListItem != null) modelList.add(rdsListItem);|if (!${PREFS}.get
 sed -i "s|if (shouldShowAutoDarkItem(currentTab, isNativePage))|if (!${PREFS}.getBoolean(\"ui_hide_menu_auto_dark\", false) \&\& shouldShowAutoDarkItem(currentTab, isNativePage))|g" "$DELEGATE"
 
 # --- MAIN MENU: Read Aloud ---
-sed -i "s|observeAndMaybeAddReadAloud(modelList, currentTab);|if (!${PREFS}.getBoolean(\"ui_hide_menu_read_aloud\", false)) { observeAndMaybeAddReadAloud(modelList, currentTab); }|g" "$DELEGATE"
+sed -i 's|protected void observeAndMaybeAddReadAloud(ModelList modelList, @Nullable Tab currentTab) {|& if (org.chromium.base.ContextUtils.getAppSharedPreferences().getBoolean("ui_hide_menu_read_aloud", false)) return;|' "$DELEGATE"
+sed -i 's|protected void observeAndMaybeAddReadAloud(ModelList modelList, @Nullable Tab currentTab) {|& if (org.chromium.base.ContextUtils.getAppSharedPreferences().getBoolean("ui_hide_menu_read_aloud", false)) return;|' chrome/android/java/src/org/chromium/chrome/browser/app/appmenu/AppMenuPropertiesDelegateImpl.java
 
 # --- MAIN MENU: Reader Mode ---
 sed -i "s|if (mMoreToolsItemBuilder.shouldShowReaderModeItem(currentTab))|if (!${PREFS}.getBoolean(\"ui_hide_menu_reader_mode\", false) \&\& mMoreToolsItemBuilder.shouldShowReaderModeItem(currentTab))|g" "$DELEGATE"
